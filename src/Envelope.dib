@@ -1,0 +1,103 @@
+#!csharp
+
+#r "nuget: Hypar.Elements, *-*"
+#r "nuget: Hypar.Functions, *-*"
+#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/CreateEnvelopes.dll"
+#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/CreateEnvelopes.Dependencies.dll"
+using CreateEnvelopes;
+using System.IO;
+using Newtonsoft.Json;
+
+#!csharp
+
+public static List<Elements.Envelope> CreateDefaultEnvelopes(Model siteModel, Model siteConstraintsModel, EnvelopeInputs input) {
+    var list = new List<Elements.Envelope>();
+    return list;
+}
+
+#!csharp
+
+public static EnvelopeOutputs Execute(Dictionary<string, Model> inputModels, EnvelopeInputs input)
+{
+    var output = new EnvelopeOutputs();
+    var hasSite = inputModels.TryGetValue("Site", out var siteModel);
+    var hasSiteConstraints = inputModels.TryGetValue("Site Constraints", out var siteConstraintsModel);
+    var defaultEnvelopes = CreateDefaultEnvelopes(siteModel, siteConstraintsModel);
+    var overriddenEnvelopes = input.Overrides.Massing.CreateElements(
+        input.Overrides.Additions.Massing,
+        input.Overrides.Removals.Massing,
+        (add) => {
+            return new Envelope(add);
+        },
+        (elem, identity) => {
+            return elem.AddId == identity.Value.AddId;
+        },
+        (elem, edit) => {
+            
+        },
+        defaultEnvelopes);
+    return output;
+}
+
+#!csharp
+
+public EnvelopeInputs GetInput()
+{
+    var json = File.ReadAllText("../test/Generated/EnvelopeTest/inputs.json");
+    return Newtonsoft.Json.JsonConvert.DeserializeObject<EnvelopeInputs>(json);
+}
+var input = GetInput();
+var modelDependencies = new Dictionary<string, Model> { 
+    {"Site", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site/ca5033d8-8bb9-43e5-b070-a2e361982465.json")) }, 
+    {"Site Constraints", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site Constraints/4a817994-21da-4eba-9469-0ee44d5c4d10.json")) }, 
+};
+var output = Execute(modelDependencies, input);
+output.Model.AddElements((modelDependencies["Site"].Elements.Values));
+output.Model.AddElements((modelDependencies["Site Constraints"].Elements.Values));
+return output.Model;
+
+#!csharp
+
+public Model DrawCurves(IEnumerable<Curve> curves) {
+    var model = new Model();
+    foreach (var curve in curves) {
+        model.AddElement(new ModelCurve(curve, BuiltInMaterials.XAxis));
+    }
+    return model;
+}
+
+#!csharp
+
+var lineJson = "[{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-185.87475812316617,\"Y\":10.59616806069089,\"Z\":0.0},\"End\":{\"X\":-253.05018972591094,\"Y\":10.163183974111167,\"Z\":0.0}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-253.08948111588975,\"Y\":16.259057152611177,\"Z\":0.0},\"End\":{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14},\"End\":{\"X\":-185.914049513145,\"Y\":-44.93410837897232,\"Z\":0.0}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-188.962049902464,\"Y\":-44.93411,\"Z\":0.0},\"End\":{\"X\":-188.962049902464,\"Y\":16.69204,\"Z\":0.0}}]";
+var lines = JsonConvert.DeserializeObject<List<Line>>(lineJson);
+
+#!csharp
+
+var siteSegmentJson = "[{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-185.914049513145,\"Y\":16.6920412391909,\"Z\":0.0},\"End\":{\"X\":-253.08948111588975,\"Y\":16.259057152611177,\"Z\":0.0}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-253.08948111588975,\"Y\":16.259057152611177,\"Z\":0.0},\"End\":{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14},\"End\":{\"X\":-185.914049513145,\"Y\":-44.93410837897232,\"Z\":0.0}},{\"discriminator\":\"Elements.Geometry.Line\",\"Start\":{\"X\":-185.914049513145,\"Y\":-44.93410837897232,\"Z\":0.0},\"End\":{\"X\":-185.914049513145,\"Y\":16.6920412391909,\"Z\":0.0}}]";
+var siteSegments = JsonConvert.DeserializeObject<List<Line>>(siteSegmentJson);
+
+#!csharp
+
+// End [Vector3]:
+// {X:-277.4299, Y:-45.3671, Z:0.0000}
+// Start [Vector3]:
+// {X:-253.0895, Y:16.2591, Z:0.0000}
+var start = new Vector3(-253.0895, 16.2591, 0.0000);
+var end = new Vector3(-277.4299, -45.3671, 0.0000);
+var line = new Line(start, end);
+
+#!csharp
+
+return siteSegments.Any((ss) => {
+    return line.Start.DistanceTo(ss.Start) < 0.01 && line.End.DistanceTo(ss.End) < 0.01;
+});
+
+#!csharp
+
+return DrawCurves(lines);
+
+#!csharp
+
+var pgonJson = "{\"discriminator\":\"Elements.Geometry.Polygon\",\"Vertices\":[{\"X\":-250.68175147156572,\"Y\":22.355056957539183,\"Z\":0.0},{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14},{\"X\":-195.9520960760371,\"Y\":-45.36709246555205,\"Z\":0.0},{\"X\":-195.9520960760371,\"Y\":22.355056957539176,\"Z\":0.0}]}";
+var pgon = JsonConvert.DeserializeObject<Polygon>(pgonJson);
+return DrawCurves(new [] { pgon });

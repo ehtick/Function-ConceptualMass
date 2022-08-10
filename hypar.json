@@ -1,0 +1,102 @@
+{
+  "$schema": "https://hypar.io/Schemas/Function.json",
+  "id": "61d4792c-c3f6-4b51-a01d-74e3dcc08140",
+  "name": "Create Envelopes",
+  "description": "Create one or more building envelopes.",
+  "language": "C#",
+  "model_dependencies": [
+    {
+      "autohide": false,
+      "name": "Site",
+      "optional": true
+    },
+    {
+      "autohide": false,
+      "name": "Site Constraints",
+      "optional": true
+    }
+  ],
+  "model_output": "Envelope",
+  "overrides": {
+    "Massing": {
+      "context": "[*discriminator=Elements.Envelope]",
+      "identity": {
+        "Add Id": {
+          "type": "string"
+        }
+      },
+      "paradigm": "edit",
+      "schema": {
+        "Massing Strategy": {
+          "enum": [
+            "Full",
+            "Donut",
+            "U",
+            "L",
+            "H",
+            "Bar",
+            "Max Courtyards"
+          ]
+        },
+        "Boundary": {
+          "$ref": "https://prod-api.hypar.io/schemas/Profile",
+          "$hyparRelativeToTransform": true
+        },
+        "Levels": {
+          "description": "How many levels should this portion of the mass be?",
+          "type": "integer",
+          "minimum": 1
+        },
+        "Floor to Floor Height": {
+          "type": "number",
+          "$hyparUnitType": "length",
+          "minimum": 2,
+          "multipleOf": 0.0001,
+          "description": "What should the default floor-to-floor height for this portion of the mass be?"
+        }
+      },
+      "behaviors": {
+        "add": {
+          "schema": {
+            "Boundary": {
+              "$ref": "https://prod-api.hypar.io/schemas/Profile",
+              "$hyparRelativeToTransform": true
+            },
+            "Levels": {
+              "description": "How many levels should this portion of the mass be?",
+              "type": "integer",
+              "minimum": 1
+            },
+            "Floor to Floor Height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "$hyparUnitType": "length",
+              "minimum": 2,
+              "multipleOf": 0.0001,
+              "description": "What should the default floor-to-floor height for this portion of the mass be?",
+              "default": null
+            }
+          }
+        },
+        "remove": true
+      }
+    }
+  },
+  "outputs": null,
+  "element_types": [
+    "http://prod-api.hypar.io/schemas/Envelope",
+    "http://prod-api.hypar.io/schemas/Site",
+    "http://prod-api.hypar.io/schemas/Level",
+    "http://prod-api.hypar.io/schemas/Setback"
+  ],
+  "repository_url": "https://github.com/hypar-io/function",
+  "last_updated": "0001-01-01T00:00:00",
+  "cli_version": "1.2.0-alpha.4",
+  "messages": {
+    "en": {
+      "name": "Envelope"
+    }
+  }
+}
