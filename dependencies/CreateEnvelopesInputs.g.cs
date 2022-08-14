@@ -59,17 +59,18 @@ namespace CreateEnvelopes
         public Overrides() { }
         
         [Newtonsoft.Json.JsonConstructor]
-        public Overrides(OverrideAdditions @additions, OverrideRemovals @removals, IList<MassingOverride> @massing)
+        public Overrides(OverrideAdditions @additions, OverrideRemovals @removals, IList<MassingOverride> @massing, IList<MassingStrategySettingsOverride> @massingStrategySettings)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<Overrides>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @additions, @removals, @massing});
+                validator.PreConstruct(new object[]{ @additions, @removals, @massing, @massingStrategySettings});
             }
         
             this.Additions = @additions ?? this.Additions;
             this.Removals = @removals ?? this.Removals;
             this.Massing = @massing ?? this.Massing;
+            this.MassingStrategySettings = @massingStrategySettings ?? this.MassingStrategySettings;
         
             if(validator != null)
             {
@@ -85,6 +86,9 @@ namespace CreateEnvelopes
     
         [Newtonsoft.Json.JsonProperty("Massing", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public IList<MassingOverride> Massing { get; set; } = new List<MassingOverride>();
+    
+        [Newtonsoft.Json.JsonProperty("Massing Strategy Settings", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public IList<MassingStrategySettingsOverride> MassingStrategySettings { get; set; } = new List<MassingStrategySettingsOverride>();
     
     }
     
@@ -178,6 +182,41 @@ namespace CreateEnvelopes
     
         [Newtonsoft.Json.JsonProperty("Value", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public MassingValue Value { get; set; }
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingStrategySettingsOverride 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingStrategySettingsOverride(string @id, MassingStrategySettingsIdentity @identity, MassingStrategySettingsValue @value)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingStrategySettingsOverride>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @id, @identity, @value});
+            }
+        
+            this.Id = @id;
+            this.Identity = @identity;
+            this.Value = @value;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Identity", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingStrategySettingsIdentity Identity { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Value", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingStrategySettingsValue Value { get; set; }
     
     }
     
@@ -280,7 +319,7 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingValue(MassingValueMassingStrategy @massingStrategy, Profile @boundary, int @levels, double @floorToFloorHeight)
+        public MassingValue(MassingValueMassingStrategy? @massingStrategy, Profile @boundary, int? @levels, double? @floorToFloorHeight)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingValue>();
             if(validator != null)
@@ -299,21 +338,81 @@ namespace CreateEnvelopes
             }
         }
     
-        [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public MassingValueMassingStrategy MassingStrategy { get; set; }
+        [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MassingValueMassingStrategy? MassingStrategy { get; set; }
     
+        /// <summary>The extents of the envelope. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
         [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Profile Boundary { get; set; }
     
         /// <summary>How many levels should this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
-        public int Levels { get; set; }
+        [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(1D, double.MaxValue)]
+        public int? Levels { get; set; }
     
         /// <summary>What should the default floor-to-floor height for this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.Range(2D, double.MaxValue)]
-        public double FloorToFloorHeight { get; set; }
+        public double? FloorToFloorHeight { get; set; }
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingStrategySettingsIdentity 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingStrategySettingsIdentity(string @addId)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingStrategySettingsIdentity>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @addId});
+            }
+        
+            this.AddId = @addId;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Add Id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string AddId { get; set; }
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingStrategySettingsValue 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingStrategySettingsValue(IList<Line> @skeleton, double? @barWidth)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingStrategySettingsValue>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @skeleton, @barWidth});
+            }
+        
+            this.Skeleton = @skeleton;
+            this.BarWidth = @barWidth;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Skeleton", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public IList<Line> Skeleton { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Bar Width", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? BarWidth { get; set; }
     
     }
     
@@ -341,6 +440,7 @@ namespace CreateEnvelopes
             }
         }
     
+        /// <summary>The extents of the envelope. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
         [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Profile Boundary { get; set; }
     
@@ -376,9 +476,6 @@ namespace CreateEnvelopes
     
         [System.Runtime.Serialization.EnumMember(Value = @"Bar")]
         Bar = 5,
-    
-        [System.Runtime.Serialization.EnumMember(Value = @"Max Courtyards")]
-        Max_Courtyards = 6,
     
     }
 }

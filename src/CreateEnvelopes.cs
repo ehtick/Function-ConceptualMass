@@ -37,13 +37,21 @@ namespace CreateEnvelopes
                 },
                 (elem, edit) =>
                 {
-                    elem.Profile = edit.Value.Boundary;
-                    elem.Boundary = edit.Value.Boundary;
-                    elem.Height = edit.Value.FloorToFloorHeight * edit.Value.Levels;
+                    elem.Profile = edit.Value.Boundary ?? elem.Profile;
+                    elem.Boundary = edit.Value.Boundary ?? elem.Boundary;
+                    elem.SetLevelInfo(edit.Value.Levels ?? elem.Levels, edit.Value.FloorToFloorHeight ?? elem.FloorToFloorHeight);
                     return elem;
                 }).ToDictionary((env) => env.AddId);
             var orderedAddedEnvelopes = addIds.Select((id) => overriddenEnvelopes[id]);
             envelopes.AddRange(orderedAddedEnvelopes);
+            input.Overrides.MassingStrategySettings.Apply(
+                envelopes,
+                (elem, identity) => elem.AddId == identity.AddId,
+                (elem, edit) =>
+                {
+                    elem.ApplyMassingSettings(edit);
+                    return elem;
+                });
             StackEnvelopes(envelopes);
             output.Model.AddElements(envelopes);
             return output;
@@ -95,19 +103,25 @@ namespace CreateEnvelopes
                         continue;
                     }
                     Profile baseProfile = null;
+                    double? floorToFloor = null;
+                    int? levels = null;
+                    var strategy = "Full";
                     // Override Edits
                     if (overridesByAddId.TryGetValue(addId, out var overrideVal))
                     {
-                        envHeight = overrideVal.Value.FloorToFloorHeight * overrideVal.Value.Levels;
+                        floorToFloor = overrideVal.Value.FloorToFloorHeight ?? Constants.DEFAULT_FLOOR_TO_FLOOR;
+                        levels = overrideVal.Value.Levels ?? (int)Math.Floor(envHeight / floorToFloor.Value);
                         baseProfile = overrideVal.Value.Boundary;
+                        strategy = Hypar.Model.Utilities.GetStringValueFromEnum(overrideVal.Value.MassingStrategy);
                     }
                     // Default profile behavior
                     var setbacksAtHeight = setbacksForSite.Where(s => curr >= s.StartingHeight).ToList();
                     baseProfile ??= CreateProfileFromSetbacks(site.Perimeter, setbacksAtHeight);
-                    var env = new Envelope(baseProfile, envHeight)
+                    var env = new Envelope(baseProfile, envHeight, floorToFloor, levels)
                     {
                         AddId = addId
                     };
+                    env.ApplyMassingStrategy(strategy, Constants.DEFAULT_BAR_WIDTH);
                     leftoverHeight = envHeight - env.Height;
                     list.Add(env);
                 }

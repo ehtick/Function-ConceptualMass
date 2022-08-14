@@ -101,3 +101,156 @@ return DrawCurves(lines);
 var pgonJson = "{\"discriminator\":\"Elements.Geometry.Polygon\",\"Vertices\":[{\"X\":-250.68175147156572,\"Y\":22.355056957539183,\"Z\":0.0},{\"X\":-277.42988663579314,\"Y\":-45.367092465552034,\"Z\":-5.10702591327572E-14},{\"X\":-195.9520960760371,\"Y\":-45.36709246555205,\"Z\":0.0},{\"X\":-195.9520960760371,\"Y\":22.355056957539176,\"Z\":0.0}]}";
 var pgon = JsonConvert.DeserializeObject<Polygon>(pgonJson);
 return DrawCurves(new [] { pgon });
+
+#!markdown
+
+# Bar Massing Strategies
+
+#!csharp
+
+static Polygon Shifted(this Polygon p, double dist) {
+    return p.TransformedPolygon(new Transform((dist, 0,0)));
+}
+
+#!csharp
+
+static void Draw(this Model m, Curve c, Color col) {
+    m.AddElement(new ModelCurve(c, new Material() {Color = col}));
+}
+
+static void Draw(this Model m, IEnumerable<Curve> c, Color col) {
+    foreach(var crv in c) {
+        m.AddElement(new ModelCurve(crv, new Material() {Color = col}));
+    }
+}
+
+static void Draw(this Model m, IEnumerable<Profile> c, Color col) {
+    foreach(var crv in c) {
+        m.AddElements(crv.ToModelCurves(material: new Material() {Color = col}));
+    }
+}
+
+static void Draw(this Model m, Profile c, Color col) {
+        m.AddElements(c.ToModelCurves(material: new Material() {Color = col}));
+    
+}
+
+#!csharp
+
+Profile Donut(Profile p, double dist) {
+    var offset = p.Offset(-dist);
+    return offset.OrderBy(o => o.Area()).Last();
+}
+
+#!csharp
+
+Profile L(Profile p, double dist, Model m = null) {
+    var perim = p.Perimeter;
+    var vertices = perim.Vertices;
+    Polyline bestPl = null;
+    var length = 0.0;
+    for(int i=0;i<vertices.Count;i++) {
+        var currVertex = i;
+        var nextVertex = (i+1)%vertices.Count;
+        var nextNextVertex = (i+2)%vertices.Count;
+        var polyline = new Polyline(vertices[currVertex], vertices[nextVertex], vertices[nextNextVertex]);
+        if(bestPl == null || polyline.Length() > length) {
+            bestPl = polyline;
+            length = polyline.Length();
+        }
+    }
+    var offset = bestPl.OffsetOpen(dist / 2);
+    var thickened = offset.Offset(dist / 2, EndType.Square);
+    m?.Draw(offset, Colors.Purple);
+    var intersected = Profile.Intersection(new [] {p}, thickened.Select(t => new Profile(t)));
+    return intersected.OrderBy(o => o.Area()).Last();
+}
+
+#!csharp
+
+Profile H(Profile p, double dist, Model m = null)
+{
+    var segments = p.Perimeter.Segments();
+    var bestLength = 0.0;
+    List<Line> winningSkeleton = null;
+    foreach (var s in segments)
+    {
+        var perp = s.Direction().Cross(Vector3.ZAxis);
+        var midPt = (s.PointAt(0.5) + p.Perimeter.Centroid()) * 0.5;
+        var centerBar = new Line(midPt, midPt + perp * 0.1);
+        var extended = centerBar.ExtendTo(segments);
+        var oppSegment = segments.FirstOrDefault(s => extended.End.DistanceTo(s) < 0.01);
+        var offset1 = oppSegment.Offset(dist / 2, false);
+        var offset2 = s.Offset(dist / 2, false);
+        m?.Draw(offset1, Colors.Pink);
+        m?.Draw(offset2, Colors.Purple);
+        centerBar.Intersects(offset1, out var ptA, true);
+        centerBar.Intersects(offset2, out var ptB, true);
+        centerBar = new Line(ptA, ptB);
+        var skeleton = new List<Line> { centerBar, offset1, offset2 };
+        var length = skeleton.Sum(l => l.Length());
+        if (length > bestLength)
+        {
+            winningSkeleton = skeleton;
+            bestLength = length;
+        }
+    }
+    var skeletonOffsets = winningSkeleton.SelectMany(l => l.ToPolyline(1).Offset(dist / 2, EndType.Square)).Select(p => new Profile(p));
+    var intersected = Profile.Intersection(skeletonOffsets, new[] { p });
+    var intersection = intersected.OrderBy(o => o.Area()).LastOrDefault();
+    m?.Draw(skeletonOffsets, Colors.Purple);
+    return intersection;
+}
+
+#!csharp
+
+var debugModel = new Model();
+var profiles = new List<Profile> {
+    new Polygon(
+        (0,0),
+        (0, 50),
+        (50, 50),
+        (50, 0)
+    ).Reversed(),
+    new Polygon(
+        (0,0),
+        (0, 50),
+        (50, 70),
+        (50, 0)
+    ).Reversed().Shifted(60),
+    new Polygon(
+        (10,0),
+        (0, 50),
+        (20, 60),
+        (50, 70),
+        (50, 0)
+    ).Reversed().Shifted(120),
+    new Polygon(
+        (10,0),
+        (0, 50),
+        (20, 60),
+        (50, 70),
+        (55, 30),
+        (50, 0)
+    ).Reversed().Shifted(180)
+};
+debugModel.Draw(profiles, Colors.Red);
+var Hs = profiles.Select(p => H(p, 10, debugModel)).ToList();
+debugModel.Draw(Hs, Colors.Blue);
+return debugModel;
+
+#!csharp
+
+var p = JsonConvert.DeserializeObject<Profile>(File.ReadAllText("../p.json"));
+
+#!csharp
+
+var m = new Model();
+m.Draw(p, Colors.Red);
+try {
+    var h = H(p, 17.5, m);
+    m.Draw(h, Colors.Blue);
+} catch {
+    
+}
+return m;

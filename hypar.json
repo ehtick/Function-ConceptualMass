@@ -19,6 +19,8 @@
   "model_output": "Envelope",
   "overrides": {
     "Massing": {
+      "$hyparOrder": 0,
+      "perProperty": true,
       "context": "[*discriminator=Elements.Envelope]",
       "identity": {
         "Add Id": {
@@ -28,27 +30,37 @@
       "paradigm": "edit",
       "schema": {
         "Massing Strategy": {
+          "type": [
+            "string",
+            "null"
+          ],
           "enum": [
             "Full",
             "Donut",
             "U",
             "L",
             "H",
-            "Bar",
-            "Max Courtyards"
+            "Bar"
           ]
         },
         "Boundary": {
+          "description": "The extents of the envelope. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option.",
           "$ref": "https://prod-api.hypar.io/schemas/Profile",
           "$hyparRelativeToTransform": true
         },
         "Levels": {
           "description": "How many levels should this portion of the mass be?",
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 1
         },
         "Floor to Floor Height": {
-          "type": "number",
+          "type": [
+            "number",
+            "null"
+          ],
           "$hyparUnitType": "length",
           "minimum": 2,
           "multipleOf": 0.0001,
@@ -60,6 +72,7 @@
           "schema": {
             "Boundary": {
               "$ref": "https://prod-api.hypar.io/schemas/Profile",
+              "description": "The extents of the envelope. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option.",
               "$hyparRelativeToTransform": true
             },
             "Levels": {
@@ -82,14 +95,39 @@
         },
         "remove": true
       }
+    },
+    "Massing Strategy Settings": {
+      "$hyparOrder": 1,
+      "perProperty": true,
+      "context": "[*discriminator=Elements.Envelope&Massing Strategy!=Full]",
+      "identity": {
+        "Add Id": {
+          "type": "string"
+        }
+      },
+      "schema": {
+        "Skeleton": {
+          "type": "array",
+          "items": {
+            "$ref": "https://hypar.io/Schemas/Geometry/Line.json"
+          }
+        },
+        "Bar Width": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "$hyparUnitType": "length",
+          "multipleOf": 0.01
+        }
+      }
     }
   },
-  "outputs": null,
   "element_types": [
-    "http://prod-api.hypar.io/schemas/Envelope",
-    "http://prod-api.hypar.io/schemas/Site",
-    "http://prod-api.hypar.io/schemas/Level",
-    "http://prod-api.hypar.io/schemas/Setback"
+    "https://prod-api.hypar.io/schemas/Envelope",
+    "https://prod-api.hypar.io/schemas/Site",
+    "https://prod-api.hypar.io/schemas/Level",
+    "https://prod-api.hypar.io/schemas/Setback"
   ],
   "repository_url": "https://github.com/hypar-io/function",
   "last_updated": "0001-01-01T00:00:00",
