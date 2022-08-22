@@ -13,5 +13,6 @@ namespace CreateEnvelopes
         public const int DEFAULT_LEVEL_COUNT = 1;
 
         public static Color ENVELOPE_COLOR = new Color("#799FBB") { Alpha = 0.3 };
+        public static Color EDGE_COLOR = new Color("#AAB8C1");
     }
 }

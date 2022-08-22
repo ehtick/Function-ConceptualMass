@@ -319,18 +319,19 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingValue(MassingValueMassingStrategy? @massingStrategy, Profile @boundary, int? @levels, double? @floorToFloorHeight)
+        public MassingValue(Profile @boundary, double? @floorToFloorHeight, IList<double> @floorToFloorHeights, int? @levels, MassingValueMassingStrategy? @massingStrategy)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @massingStrategy, @boundary, @levels, @floorToFloorHeight});
+                validator.PreConstruct(new object[]{ @boundary, @floorToFloorHeight, @floorToFloorHeights, @levels, @massingStrategy});
             }
         
-            this.MassingStrategy = @massingStrategy;
             this.Boundary = @boundary;
-            this.Levels = @levels;
             this.FloorToFloorHeight = @floorToFloorHeight;
+            this.FloorToFloorHeights = @floorToFloorHeights;
+            this.Levels = @levels;
+            this.MassingStrategy = @massingStrategy;
         
             if(validator != null)
             {
@@ -338,23 +339,27 @@ namespace CreateEnvelopes
             }
         }
     
-        [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public MassingValueMassingStrategy? MassingStrategy { get; set; }
-    
-        /// <summary>The extents of the envelope. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
-        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        /// <summary>The extents of the mass. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
+        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Profile Boundary { get; set; }
+    
+        /// <summary>What should the default floor-to-floor height for this portion of the mass be?</summary>
+        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(2D, double.MaxValue)]
+        public double? FloorToFloorHeight { get; set; }
+    
+        /// <summary>Manage the per-level floor-to-floor heights.</summary>
+        [Newtonsoft.Json.JsonProperty("Floor To Floor Heights", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public IList<double> FloorToFloorHeights { get; set; }
     
         /// <summary>How many levels should this portion of the mass be?</summary>
         [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.Range(1D, double.MaxValue)]
         public int? Levels { get; set; }
     
-        /// <summary>What should the default floor-to-floor height for this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(2D, double.MaxValue)]
-        public double? FloorToFloorHeight { get; set; }
+        [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MassingValueMassingStrategy? MassingStrategy { get; set; }
     
     }
     
@@ -391,16 +396,16 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingStrategySettingsValue(IList<Line> @skeleton, double? @barWidth)
+        public MassingStrategySettingsValue(double? @barWidth, IList<Line> @skeleton)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingStrategySettingsValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @skeleton, @barWidth});
+                validator.PreConstruct(new object[]{ @barWidth, @skeleton});
             }
         
-            this.Skeleton = @skeleton;
             this.BarWidth = @barWidth;
+            this.Skeleton = @skeleton;
         
             if(validator != null)
             {
@@ -408,11 +413,11 @@ namespace CreateEnvelopes
             }
         }
     
-        [Newtonsoft.Json.JsonProperty("Skeleton", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public IList<Line> Skeleton { get; set; }
-    
         [Newtonsoft.Json.JsonProperty("Bar Width", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public double? BarWidth { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Skeleton", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public IList<Line> Skeleton { get; set; }
     
     }
     
@@ -422,17 +427,19 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingOverrideAdditionValue(Profile @boundary, int @levels, double? @floorToFloorHeight)
+        public MassingOverrideAdditionValue(Profile @boundary, IList<Line> @centerline, double? @floorToFloorHeight, int @levels, MassingOverrideAdditionValueMode @mode)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingOverrideAdditionValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @boundary, @levels, @floorToFloorHeight});
+                validator.PreConstruct(new object[]{ @boundary, @centerline, @floorToFloorHeight, @levels, @mode});
             }
         
             this.Boundary = @boundary;
-            this.Levels = @levels;
+            this.Centerline = @centerline;
             this.FloorToFloorHeight = @floorToFloorHeight;
+            this.Levels = @levels;
+            this.Mode = @mode;
         
             if(validator != null)
             {
@@ -441,18 +448,25 @@ namespace CreateEnvelopes
         }
     
         /// <summary>The extents of the envelope. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
-        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Profile Boundary { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Centerline", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public IList<Line> Centerline { get; set; }
+    
+        /// <summary>What should the default floor-to-floor height for this portion of the mass be?</summary>
+        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(2D, double.MaxValue)]
+        public double? FloorToFloorHeight { get; set; }
     
         /// <summary>How many levels should this portion of the mass be?</summary>
         [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
         public int Levels { get; set; }
     
-        /// <summary>What should the default floor-to-floor height for this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Floor to Floor Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(2D, double.MaxValue)]
-        public double? FloorToFloorHeight { get; set; }
+        [Newtonsoft.Json.JsonProperty("Mode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public MassingOverrideAdditionValueMode Mode { get; set; } = MassingOverrideAdditionValueMode.Boundary;
     
     }
     
@@ -476,6 +490,17 @@ namespace CreateEnvelopes
     
         [System.Runtime.Serialization.EnumMember(Value = @"Bar")]
         Bar = 5,
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    public enum MassingOverrideAdditionValueMode
+    {
+        [System.Runtime.Serialization.EnumMember(Value = @"Boundary")]
+        Boundary = 0,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Centerline")]
+        Centerline = 1,
     
     }
 }

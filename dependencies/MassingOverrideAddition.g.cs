@@ -12,7 +12,7 @@ namespace CreateEnvelopes
 	{
         public static string Name = "Massing Addition";
         public static string Dependency = null;
-        public static string Context = "[*discriminator=Elements.Envelope]";
+        public static string Context = "[*discriminator=Elements.ConceptualMass]";
 		public static string Paradigm = "Edit";
 
         /// <summary>

@@ -168,6 +168,40 @@ Profile L(Profile p, double dist, Model m = null) {
 
 #!csharp
 
+private void Bar(Profile p, double dist)
+        {
+            var centroid = p.Perimeter.Centroid();
+            var dirs = p.Perimeter.Segments().Select(s => s.Direction()).ToList();
+            var bestLength = 0.0;
+            Line bestBar = null;
+            foreach (var dir in dirs)
+            {
+                var l = new Line(centroid, centroid + dir * 0.1);
+                var extended = l.ExtendTo(p.Perimeter);
+                var length = extended.Length();
+                if (length > bestLength)
+                {
+                    bestBar = l;
+                    bestLength = length;
+                }
+            }
+            var offset = bestBar.ToPolyline().Offset(dist / 2, EndType.Square).Select(p => new Profile(p));
+            var intersected = Profile.Intersection(offset, new[] { p });
+            var intersection = intersected.OrderBy(o => o.Area()).LastOrDefault();
+            if (intersection != null)
+            {
+                Profile = intersection;
+                Skeleton = new List<Line> { bestBar };
+            }
+            else
+            {
+                Profile = p;
+                MassingStrategy = "Full";
+            }
+        }
+
+#!csharp
+
 Profile H(Profile p, double dist, Model m = null)
 {
     var segments = p.Perimeter.Segments();
@@ -204,6 +238,31 @@ Profile H(Profile p, double dist, Model m = null)
 
 #!csharp
 
+Profile Bar(Profile p, double dist)
+        {
+            var centroid = p.Perimeter.Centroid();
+            var dirs = p.Perimeter.Segments().Select(s => s.Direction()).ToList();
+            var bestLength = 0.0;
+            Line bestBar = null;
+            foreach (var dir in dirs)
+            {
+                var l = new Line(centroid, centroid + dir * 0.1);
+                var extended = l.ExtendTo(p.Perimeter);
+                var length = extended.Length();
+                if (length > bestLength)
+                {
+                    bestBar = extended;
+                    bestLength = length;
+                }
+            }
+            var offset = bestBar.ToPolyline().Offset(dist / 2, EndType.Square).Select(p => new Profile(p));
+            var intersected = Profile.Intersection(offset, new[] { p });
+            var intersection = intersected.OrderBy(o => o.Area()).LastOrDefault();
+            return intersection;
+        }
+
+#!csharp
+
 var debugModel = new Model();
 var profiles = new List<Profile> {
     new Polygon(
@@ -235,8 +294,8 @@ var profiles = new List<Profile> {
     ).Reversed().Shifted(180)
 };
 debugModel.Draw(profiles, Colors.Red);
-var Hs = profiles.Select(p => H(p, 10, debugModel)).ToList();
-debugModel.Draw(Hs, Colors.Blue);
+var bars = profiles.Select(p => Bar(p, 10)).ToList();
+debugModel.Draw(bars, Colors.Blue);
 return debugModel;
 
 #!csharp
@@ -254,3 +313,122 @@ try {
     
 }
 return m;
+
+#!csharp
+
+var lines = new [] {
+    new Line((6,8), (6,10)),
+    new Line((-2, 10), (0,0)),
+    new Line((0,0), (5, 0)),
+    new Line((5, 0), (10, 10)),
+    new Line((4, 5), (6, 8)),
+};
+var linesAsPls = lines.Select(l => l.ToPolyline(1));
+var joined = TryJoinPolylines(linesAsPls);
+var m = new Model();
+m.Draw(lines, Colors.Red);
+m.Draw(joined, Colors.Blue);
+return m;
+
+#!csharp
+
+private List<Polyline> TryJoinPolylines(IEnumerable<Polyline> skeleton, List<Polyline> currentPolylines = null, int depth = 0)
+        {
+            if (depth > 50)
+            {
+                return currentPolylines;
+            }
+            if (currentPolylines == null)
+            {
+                currentPolylines = new List<Polyline>();
+            }
+            foreach (var pl in skeleton)
+            {
+                if (currentPolylines.Count == 0)
+                {
+                    currentPolylines.Add(pl);
+                }
+                else
+                {
+                    var startToStart = currentPolylines.FirstOrDefault(p => p.Start.DistanceTo(pl.Start) < 0.01);
+                    if (startToStart != null)
+                    {
+                        // E--pl--S S--p--E
+                        currentPolylines.Remove(startToStart);
+                        var verts = new List<Vector3>(pl.Vertices.Skip(1).Reverse());
+                        verts.AddRange(startToStart.Vertices);
+                        var newPl = new Polyline(verts);
+                        TryJoinPolylines(new[] { newPl }, currentPolylines, depth + 1);
+                        continue;
+                    }
+                    var startToEnd = currentPolylines.FirstOrDefault(p => p.End.DistanceTo(pl.Start) < 0.01);
+                    if (startToEnd != null)
+                    {
+                        // S--p--E S--pl--E
+                        currentPolylines.Remove(startToEnd);
+                        var verts = new List<Vector3>(startToEnd.Vertices);
+                        verts.AddRange(pl.Vertices.Skip(1));
+                        var newPl = new Polyline(verts);
+                        TryJoinPolylines(new[] { newPl }, currentPolylines, depth + 1);
+                        continue;
+                    }
+                    var endToStart = currentPolylines.FirstOrDefault(p => p.Start.DistanceTo(pl.End) < 0.01);
+                    if (endToStart != null)
+                    {
+                        // S--pl--E S--p--E
+                        currentPolylines.Remove(endToStart);
+                        var verts = new List<Vector3>(pl.Vertices.SkipLast(1));
+                        verts.AddRange(endToStart.Vertices);
+                        var newPl = new Polyline(verts);
+                        TryJoinPolylines(new[] { newPl }, currentPolylines, depth + 1);
+                        continue;
+                    }
+                    var endToEnd = currentPolylines.FirstOrDefault(p => p.End.DistanceTo(pl.End) < 0.01);
+                    if (endToEnd != null)
+                    {
+                        // S--p--E E--pl--S
+                        currentPolylines.Remove(endToEnd);
+                        var verts = new List<Vector3>(endToEnd.Vertices);
+                        verts.AddRange(pl.Vertices.SkipLast(1).Reverse());
+                        var newPl = new Polyline(verts);
+                        TryJoinPolylines(new[] { newPl }, currentPolylines, depth + 1);
+                        continue;
+                    }
+                    currentPolylines.Add(pl);
+                }
+            }
+            return currentPolylines;
+        }
+
+#!csharp
+
+var plJson = File.ReadAllText("../skeleton.json");
+var pls = JsonConvert.DeserializeObject<List<Polyline>>(plJson);
+// var cplJson = File.ReadAllText("../currentPolylines.json");
+// var cpls = JsonConvert.DeserializeObject<List<Polyline>>(cplJson);
+// var pJson = File.ReadAllText("../pl.json");
+// var pl = JsonConvert.DeserializeObject<Polyline>(pJson);
+
+// var currJ = File.ReadAllText("../startToEnd.json");
+// var curr = JsonConvert.DeserializeObject<Polyline>(currJ);
+
+// var npj = File.ReadAllText("../newPl.json");
+// var npl = JsonConvert.DeserializeObject<Polyline>(npj);
+
+// var e2sj = File.ReadAllText("../endToStart.json");
+// var e2s = JsonConvert.DeserializeObject<Polyline>(e2sj);
+
+var joined = TryJoinPolylines(pls);
+var m3 = new Model();
+m3.Draw(pls, Colors.Blue);
+m3.Draw(joined, Colors.Green);
+// // m3.Draw(pl, Colors.Yellow);
+// m3.Draw(curr, Colors.Purple);
+// var l = new Line(e2s.End, e2s.End + (0,0,5));
+// m3.Draw(l, Colors.Red);
+//m3.Draw(npl, Colors.Orange);
+return m3;
+
+#!csharp
+
+joined

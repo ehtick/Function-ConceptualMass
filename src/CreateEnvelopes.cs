@@ -20,14 +20,23 @@ namespace CreateEnvelopes
             var output = new CreateEnvelopesOutputs();
             var hasSite = inputModels.TryGetValue("Site", out var siteModel);
             var hasSiteConstraints = inputModels.TryGetValue("Site Constraints", out var siteConstraintsModel);
-            var envelopes = CreateDefaultEnvelopes(siteModel, siteConstraintsModel, input);
+            var hasUnitDefinitions = inputModels.TryGetValue("Unit Definitions", out var residentialUnitsModel);
+            var barWidth = Constants.DEFAULT_BAR_WIDTH;
+            if (hasUnitDefinitions)
+            {
+                var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
+                // choose the largest depth:
+                var greatestDepth = unitDefs.Max(u => u.Depth);
+                barWidth = greatestDepth * 2 + Units.FeetToMeters(5);
+            }
+            var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, input, barWidth);
             var addIds = new List<string>();
-            var overriddenEnvelopes = input.Overrides.Massing.CreateElements(
+            var overriddenMasses = input.Overrides.Massing.CreateElements(
                 input.Overrides.Additions.Massing,
                 input.Overrides.Removals.Massing,
                 (add) =>
                 {
-                    var env = new Envelope(add);
+                    var env = new ConceptualMass(add, barWidth);
                     addIds.Add(env.AddId);
                     return env;
                 },
@@ -40,20 +49,30 @@ namespace CreateEnvelopes
                     elem.Profile = edit.Value.Boundary ?? elem.Profile;
                     elem.Boundary = edit.Value.Boundary ?? elem.Boundary;
                     elem.SetLevelInfo(edit.Value.Levels ?? elem.Levels, edit.Value.FloorToFloorHeight ?? elem.FloorToFloorHeight);
+                    if (edit.Value.FloorToFloorHeights != null)
+                    {
+                        elem.SetFloorToFloorHeights(edit.Value.FloorToFloorHeights.ToList());
+                    }
+                    if (edit.Value.MassingStrategy != null)
+                    {
+                        elem.ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+                    }
                     return elem;
                 }).ToDictionary((env) => env.AddId);
-            var orderedAddedEnvelopes = addIds.Select((id) => overriddenEnvelopes[id]);
-            envelopes.AddRange(orderedAddedEnvelopes);
+            var orderedAddedMasses = addIds.Select((id) => overriddenMasses[id]);
+            masses.AddRange(orderedAddedMasses);
             input.Overrides.MassingStrategySettings.Apply(
-                envelopes,
+                masses,
                 (elem, identity) => elem.AddId == identity.AddId,
                 (elem, edit) =>
                 {
                     elem.ApplyMassingSettings(edit);
                     return elem;
                 });
-            StackEnvelopes(envelopes);
-            output.Model.AddElements(envelopes);
+            StackMasses(masses);
+            output.Model.AddElements(masses);
+            output.Model.AddElements(masses.SelectMany(e => e.GetDimensions()));
+            output.Model.AddElements(masses.SelectMany(e => e.GetLevelDisplay()));
             return output;
         }
 
@@ -63,12 +82,12 @@ namespace CreateEnvelopes
             return new Site(rect, rect.Area());
         }
 
-        public static List<Envelope> CreateDefaultEnvelopes(Model siteModel, Model siteConstraintsModel, CreateEnvelopesInputs input)
+        public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, CreateEnvelopesInputs input, double barWidth)
         {
             var removedAddIds = new HashSet<string>(input.Overrides.Removals.Massing.Select((r) => r.Identity.AddId));
             var overridesByAddId = input.Overrides.Massing.ToDictionary((o) => o.Identity.AddId);
 
-            var list = new List<Envelope>();
+            var list = new List<ConceptualMass>();
             var sites = siteModel?.AllElementsOfType<Site>() ?? new List<Site>() { CreateDefaultSite() };
             var allSetbacks = siteConstraintsModel?.AllElementsOfType<Setback>() ?? new List<Setback>();
             var allSiteConstraints = siteConstraintsModel?.AllElementsOfType<SiteConstraintInfo>() ?? new List<SiteConstraintInfo>();
@@ -112,16 +131,27 @@ namespace CreateEnvelopes
                         floorToFloor = overrideVal.Value.FloorToFloorHeight ?? Constants.DEFAULT_FLOOR_TO_FLOOR;
                         levels = overrideVal.Value.Levels ?? (int)Math.Floor(envHeight / floorToFloor.Value);
                         baseProfile = overrideVal.Value.Boundary;
-                        strategy = Hypar.Model.Utilities.GetStringValueFromEnum(overrideVal.Value.MassingStrategy);
+                        if (overrideVal.Value.MassingStrategy != null)
+                        {
+                            strategy = Hypar.Model.Utilities.GetStringValueFromEnum(overrideVal.Value.MassingStrategy);
+                        }
                     }
                     // Default profile behavior
                     var setbacksAtHeight = setbacksForSite.Where(s => curr >= s.StartingHeight).ToList();
                     baseProfile ??= CreateProfileFromSetbacks(site.Perimeter, setbacksAtHeight);
-                    var env = new Envelope(baseProfile, envHeight, floorToFloor, levels)
+                    var env = new ConceptualMass(baseProfile, envHeight, floorToFloor, levels)
                     {
                         AddId = addId
                     };
-                    env.ApplyMassingStrategy(strategy, Constants.DEFAULT_BAR_WIDTH);
+                    env.ApplyMassingStrategy(strategy, barWidth);
+                    // More Override Edits
+                    if (overrideVal != null)
+                    {
+                        if (overrideVal.Value.FloorToFloorHeights != null)
+                        {
+                            env.SetFloorToFloorHeights(overrideVal.Value.FloorToFloorHeights.ToList());
+                        }
+                    }
                     leftoverHeight = envHeight - env.Height;
                     list.Add(env);
                 }
@@ -201,20 +231,20 @@ namespace CreateEnvelopes
             return profile;
         }
 
-        public static void StackEnvelopes(List<Envelope> envelopes)
+        public static void StackMasses(List<ConceptualMass> envelopes)
         {
-            var seenEnvelopes = new List<Envelope>();
+            var seenMasses = new List<ConceptualMass>();
             foreach (var e in envelopes)
             {
-                foreach (var se in seenEnvelopes)
+                foreach (var se in seenMasses)
                 {
-                    if (se.Profile.Perimeter.Contains(e.Profile.Perimeter.Centroid()) || e.Profile.Perimeter.Vertices.All(v => se.Profile.Perimeter.Contains(v, out var containment) || containment != Containment.Outside))
+                    if (se.Profile.Perimeter.Intersects(e.Profile.Perimeter))
                     {
                         e.Transform.Move((0, 0, se.Height));
                         e.Elevation = e.Transform.Origin.Z;
                     }
                 }
-                seenEnvelopes.Add(e);
+                seenMasses.Add(e);
             }
         }
     }

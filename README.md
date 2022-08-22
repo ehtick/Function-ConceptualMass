@@ -2,7 +2,7 @@
 
 # Create Envelopes
 
-Create one or more building envelopes.
+Create one or more conceptual building masses.
 
 |Input Name|Type|Description|
 |---|---|---|
