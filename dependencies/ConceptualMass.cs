@@ -29,6 +29,9 @@ namespace Elements
         [JsonProperty("Bar Width")]
         public double BarWidth { get; set; }
 
+        [JsonProperty("Primary Use Category")]
+        public string PrimaryUseCategory { get; set; }
+
         // Boundary is the drawn outer boundary of the envelope. If we're
         // studying different massing strategies, they will create a smaller
         // profile within this boundary.
@@ -60,6 +63,22 @@ namespace Elements
             Initialize();
         }
 
+        public void Update(MassingOverride edit, double barWidth)
+        {
+            Profile = edit.Value.Boundary ?? Profile;
+            Boundary = edit.Value.Boundary ?? Boundary;
+            PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
+            SetLevelInfo(edit.Value.Levels ?? Levels, edit.Value.FloorToFloorHeight ?? FloorToFloorHeight);
+            if (edit.Value.FloorToFloorHeights != null)
+            {
+                SetFloorToFloorHeights(edit.Value.FloorToFloorHeights.ToList());
+            }
+            if (edit.Value.MassingStrategy != null)
+            {
+                ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+            }
+        }
+
         public void SetLevelInfo(int levels, double floorToFloorHeight = Constants.DEFAULT_FLOOR_TO_FLOOR)
         {
             FloorToFloorHeight = floorToFloorHeight;
@@ -87,12 +106,12 @@ namespace Elements
                 double f2f = this.FloorToFloorHeights[i];
                 var nextCorner = corner + (0, 0, f2f);
                 var alignedDim = new AlignedDimension(nextCorner, corner, plane);
-                alignedDim.AdditionalProperties["LinkedOverrideProperty"] = new Dictionary<string, object> {
+                alignedDim.AdditionalProperties["LinkedProperty"] = new Dictionary<string, object> {
                     { "ElementId", this.Id },
                     { "OverrideName", "Massing" },
-                    { "Property", "Floor To Floor Heights" },
+                    { "PropertyName", "Floor To Floor Heights" },
                     { "Index", i },
-                    { "VisibleOnSelection", true }
+                    { "VisibleOnlyOnSelection", true }
                 };
                 dims.Add(alignedDim);
                 corner = nextCorner;

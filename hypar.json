@@ -146,6 +146,17 @@
             "H",
             "Bar"
           ]
+        },
+        "Primary Use Category": {
+          "type": "string",
+          "$hyparAutocomplete": [
+            "Residential",
+            "Office",
+            "Hotel",
+            "Retail",
+            "Industrial",
+            "Warehouse"
+          ]
         }
       },
       "verbs": {

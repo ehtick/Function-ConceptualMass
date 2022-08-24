@@ -319,12 +319,12 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingValue(Profile @boundary, double? @floorToFloorHeight, IList<double> @floorToFloorHeights, int? @levels, MassingValueMassingStrategy? @massingStrategy)
+        public MassingValue(Profile @boundary, double? @floorToFloorHeight, IList<double> @floorToFloorHeights, int? @levels, MassingValueMassingStrategy? @massingStrategy, string @primaryUseCategory)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @boundary, @floorToFloorHeight, @floorToFloorHeights, @levels, @massingStrategy});
+                validator.PreConstruct(new object[]{ @boundary, @floorToFloorHeight, @floorToFloorHeights, @levels, @massingStrategy, @primaryUseCategory});
             }
         
             this.Boundary = @boundary;
@@ -332,6 +332,7 @@ namespace CreateEnvelopes
             this.FloorToFloorHeights = @floorToFloorHeights;
             this.Levels = @levels;
             this.MassingStrategy = @massingStrategy;
+            this.PrimaryUseCategory = @primaryUseCategory;
         
             if(validator != null)
             {
@@ -360,6 +361,9 @@ namespace CreateEnvelopes
         [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public MassingValueMassingStrategy? MassingStrategy { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Primary Use Category", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string PrimaryUseCategory { get; set; }
     
     }
     

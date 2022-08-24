@@ -46,17 +46,8 @@ namespace CreateEnvelopes
                 },
                 (elem, edit) =>
                 {
-                    elem.Profile = edit.Value.Boundary ?? elem.Profile;
-                    elem.Boundary = edit.Value.Boundary ?? elem.Boundary;
-                    elem.SetLevelInfo(edit.Value.Levels ?? elem.Levels, edit.Value.FloorToFloorHeight ?? elem.FloorToFloorHeight);
-                    if (edit.Value.FloorToFloorHeights != null)
-                    {
-                        elem.SetFloorToFloorHeights(edit.Value.FloorToFloorHeights.ToList());
-                    }
-                    if (edit.Value.MassingStrategy != null)
-                    {
-                        elem.ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
-                    }
+                    elem.Update(edit, barWidth);
+
                     return elem;
                 }).ToDictionary((env) => env.AddId);
             var orderedAddedMasses = addIds.Select((id) => overriddenMasses[id]);
@@ -125,6 +116,7 @@ namespace CreateEnvelopes
                     double? floorToFloor = null;
                     int? levels = null;
                     var strategy = "Full";
+                    var primaryUseCategory = "Office";
                     // Override Edits
                     if (overridesByAddId.TryGetValue(addId, out var overrideVal))
                     {
@@ -135,13 +127,16 @@ namespace CreateEnvelopes
                         {
                             strategy = Hypar.Model.Utilities.GetStringValueFromEnum(overrideVal.Value.MassingStrategy);
                         }
+                        // if the user has chosen a strategy other than "Full", and not set a primary use category, let's assume residential, since bars typically are.
+                        primaryUseCategory = overrideVal.Value.PrimaryUseCategory ?? (overrideVal.Value.MassingStrategy != null ? "Residential" : "Office");
                     }
                     // Default profile behavior
                     var setbacksAtHeight = setbacksForSite.Where(s => curr >= s.StartingHeight).ToList();
                     baseProfile ??= CreateProfileFromSetbacks(site.Perimeter, setbacksAtHeight);
                     var env = new ConceptualMass(baseProfile, envHeight, floorToFloor, levels)
                     {
-                        AddId = addId
+                        AddId = addId,
+                        PrimaryUseCategory = primaryUseCategory,
                     };
                     env.ApplyMassingStrategy(strategy, barWidth);
                     // More Override Edits
