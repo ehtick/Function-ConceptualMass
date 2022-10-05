@@ -14,6 +14,14 @@
       "autohide": false,
       "name": "Site Constraints",
       "optional": true
+    },
+    {
+      "name": "Unit Definitions",
+      "optional": true
+    },
+    {
+      "name": "Levels",
+      "optional": false
     }
   ],
   "model_output": "Conceptual Mass",
@@ -52,23 +60,12 @@
                 "$ref": "https://hypar.io/Schemas/Geometry/Line.json"
               }
             },
-            "Floor to Floor Height": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "$hyparOrder": 4,
-              "$hyparUnitType": "length",
-              "default": null,
-              "description": "What should the default floor-to-floor height for this portion of the mass be?",
-              "minimum": 2,
-              "multipleOf": 0.0001
-            },
             "Levels": {
               "type": "integer",
               "$hyparOrder": 3,
               "description": "How many levels should this portion of the mass be?",
-              "minimum": 1
+              "minimum": 1,
+              "default": 1
             },
             "Mode": {
               "type": "string",
@@ -77,6 +74,21 @@
               "enum": [
                 "Boundary",
                 "Centerline"
+              ]
+            },
+            "Primary Use Category": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "$hyparAutocomplete": [
+                "Residential",
+                "Office",
+                "Hotel",
+                "Parking",
+                "Retail",
+                "Industrial",
+                "Warehouse"
               ]
             }
           }
@@ -97,31 +109,6 @@
           "$hyparRelativeToTransform": true,
           "$ref": "https://prod-api.hypar.io/schemas/Profile",
           "description": "The extents of the mass. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option."
-        },
-        "Floor to Floor Height": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "$hyparOrder": 3,
-          "$hyparUnitType": "length",
-          "description": "What should the default floor-to-floor height for this portion of the mass be?",
-          "minimum": 2,
-          "multipleOf": 0.0001
-        },
-        "Floor To Floor Heights": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "$hyparOrder": 4,
-          "description": "Manage the per-level floor-to-floor heights.",
-          "items": {
-            "type": "number",
-            "$hyparUnitType": "length",
-            "minimum": 2,
-            "multipleOf": 0.0001
-          }
         },
         "Levels": {
           "type": [
@@ -153,6 +140,7 @@
             "Residential",
             "Office",
             "Hotel",
+            "Parking",
             "Retail",
             "Industrial",
             "Warehouse"
@@ -200,13 +188,56 @@
         "remove": null,
         "revert": null
       }
+    },
+    "Building Info": {
+      "context": "[*discriminator=Elements.Building]",
+      "identity": {
+        "MassAddIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "schema": {
+        "Name": {
+          "type": "string"
+        }
+      }
+    },
+    "Level Settings": {
+      "context": "[*discriminator=Elements.LevelVolume]",
+      "identity": {
+        "Add Id": {
+          "type": "string"
+        }
+      },
+      "schema": {
+        "Primary Use Category": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "$hyparAutocomplete": [
+            "Residential",
+            "Office",
+            "Hotel",
+            "Parking",
+            "Retail",
+            "Industrial",
+            "Warehouse"
+          ]
+        }
+      }
     }
   },
   "element_types": [
     "https://prod-api.hypar.io/schemas/Site",
     "https://prod-api.hypar.io/schemas/Level",
     "https://prod-api.hypar.io/schemas/Setback",
-    "https://prod-api.hypar.io/schemas/ConceptualMass"
+    "https://prod-api.hypar.io/schemas/ConceptualMass",
+    "https://prod-api.hypar.io/schemas/LevelVolume",
+    "https://prod-api.hypar.io/schemas/ViewScope"
   ],
   "repository_url": "https://github.com/hypar-io/function",
   "last_updated": "0001-01-01T00:00:00",

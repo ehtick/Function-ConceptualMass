@@ -27,7 +27,7 @@ namespace Elements
     public partial class Setback : GeometricElement
     {
         [JsonConstructor]
-        public Setback(Line @baseline, double @distance, double @startingHeight, System.Guid @site, double @angle, Transform @transform = null, Material @material = null, Representation @representation = null, bool @isElementDefinition = false, System.Guid @id = default, string @name = null)
+        public Setback(Line @baseline, double @distance, double @startingHeight, System.Guid @site, double @angle, double? @balconyProtrusionDepth, Transform @transform = null, Material @material = null, Representation @representation = null, bool @isElementDefinition = false, System.Guid @id = default, string @name = null)
             : base(transform, material, representation, isElementDefinition, id, name)
         {
             this.Baseline = @baseline;
@@ -35,6 +35,7 @@ namespace Elements
             this.StartingHeight = @startingHeight;
             this.Site = @site;
             this.Angle = @angle;
+            this.BalconyProtrusionDepth = @balconyProtrusionDepth;
             }
         
         // Empty constructor
@@ -62,6 +63,10 @@ namespace Elements
         /// <summary>The angle of the setback or skyplane. An angle of 0.0 is a vertical setback.</summary>
         [JsonProperty("Angle", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public double Angle { get; set; }
+    
+        /// <summary>If set, balconies are permitted to penetrate into this setback by this distance.</summary>
+        [JsonProperty("Balcony Protrusion Depth", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? BalconyProtrusionDepth { get; set; }
     
     
     }

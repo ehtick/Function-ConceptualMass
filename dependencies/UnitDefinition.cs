@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Elements.Annotations;
 using Elements.Geometry;
@@ -9,5 +10,7 @@ namespace Elements
     {
         public double Width { get; set; }
         public double Depth { get; set; }
+
+        public Guid Balcony { get; set; }
     }
 }

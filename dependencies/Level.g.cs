@@ -21,16 +21,17 @@ namespace Elements
 {
     #pragma warning disable // Disable all warnings
 
-    /// <summary>An elevation level for a building</summary>
+    /// <summary>A horizontal datum representing a building level at a specific elevation.</summary>
     [JsonConverter(typeof(Elements.Serialization.JSON.JsonInheritanceConverter), "discriminator")]
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class Level : GeometricElement
+    public partial class Level : Element
     {
         [JsonConstructor]
-        public Level(double @elevation, Transform @transform = null, Material @material = null, Representation @representation = null, bool @isElementDefinition = false, System.Guid @id = default, string @name = null)
-            : base(transform, material, representation, isElementDefinition, id, name)
+        public Level(double @elevation, double? @height, System.Guid @id = default, string @name = null)
+            : base(id, name)
         {
             this.Elevation = @elevation;
+            this.Height = @height;
             }
         
         // Empty constructor
@@ -41,6 +42,10 @@ namespace Elements
     
         [JsonProperty("Elevation", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public double Elevation { get; set; }
+    
+        /// <summary>The vertical distance from this level to the next. May be null for a top level, like a roof.</summary>
+        [JsonProperty("Height", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? Height { get; set; }
     
     
     }

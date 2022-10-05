@@ -14,5 +14,8 @@ namespace CreateEnvelopes
 
         public static Color ENVELOPE_COLOR = new Color("#799FBB") { Alpha = 0.3 };
         public static Color EDGE_COLOR = new Color("#AAB8C1");
+
+        public static readonly Material LEVEL_MATERIAL = new Material("Level") { Color = new Color("#F1F2F4") { Alpha = 0.5 }, SpecularFactor = 0.5, GlossinessFactor = 0 };
+
     }
 }

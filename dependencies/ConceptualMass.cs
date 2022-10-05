@@ -17,20 +17,17 @@ namespace Elements
 
         public int Levels { get; set; }
 
-        [JsonProperty("Floor to Floor Height")]
-        public double FloorToFloorHeight { get; set; }
-
         [JsonProperty("Massing Strategy")]
         public string MassingStrategy { get; set; } = "Full";
 
-        [JsonProperty("Skeleton")]
-        public List<Line> Skeleton { get; set; }
+        // [JsonProperty("Skeleton")]
+        // public List<Line> Skeleton { get; set; }
 
         [JsonProperty("Bar Width")]
         public double BarWidth { get; set; }
 
-        [JsonProperty("Primary Use Category")]
-        public string PrimaryUseCategory { get; set; }
+        // [JsonProperty("Primary Use Category")]
+        // public string PrimaryUseCategory { get; set; }
 
         // Boundary is the drawn outer boundary of the envelope. If we're
         // studying different massing strategies, they will create a smaller
@@ -38,57 +35,77 @@ namespace Elements
 
         [JsonProperty("Boundary", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Profile Boundary { get; set; }
+
+        [JsonIgnore]
+        public List<Level> LevelElements { get; set; } = new List<Level>();
+
+        [JsonIgnore]
+        private Guid LevelGroupId { get; set; }
+
+        private static Plane XY = new Plane((0, 0), (0, 0, 1));
+
+        // public List<Guid> LevelIds => 
+
+        // public Guid? Building { get; set; }
         public ConceptualMass(MassingOverrideAddition add, double barWidth)
         {
-            Profile = add.Value.Boundary;
+            Profile = add.Value.Boundary?.Project(XY);
             Boundary = Profile;
-            SetLevelInfo(add.Value.Levels, add.Value.FloorToFloorHeight ?? Constants.DEFAULT_FLOOR_TO_FLOOR);
+
+
             AddId = add.Id;
-            Levels = add.Value.Levels;
+            Levels = Math.Max(1, add.Value.Levels);
             if (add.Value.Mode == MassingOverrideAdditionValueMode.Centerline)
             {
                 Skeleton = add.Value.Centerline.ToList();
                 ApplyMassingStrategy("Custom", barWidth);
             }
+            // we only set up the LCS at "add" time, so that it can be used for
+            // downstream relative identity. We don't want it to change if the
+            // user edits the mass.
+            ComputeLCS();
+            PrimaryUseCategory = add.Value.PrimaryUseCategory;
+            Identity.AddOverrideIdentity(this, add);
             Initialize();
         }
 
-        public ConceptualMass(Profile boundary, double maxHeight, double? floorToFloorHeight = null, int? levels = null)
+        private void ComputeLCS()
         {
-            Profile = boundary;
-            Boundary = boundary;
-            FloorToFloorHeight = floorToFloorHeight ?? Constants.DEFAULT_FLOOR_TO_FLOOR;
-            Levels = levels ?? (int)Math.Floor(maxHeight / FloorToFloorHeight);
-            SetLevelInfo(Levels, FloorToFloorHeight);
+            var lcsLocation = Profile?.Perimeter?.Centroid() ?? Skeleton.Select(sk => sk.PointAt(0.5)).Aggregate((a, b) => a + b) / Skeleton.Count;
+            var longestEdge = (Profile?.Perimeter?.Segments() ?? Skeleton).OrderByDescending(s => s.Length()).First();
+            LocalCoordinateSystem = new Transform(lcsLocation, longestEdge.Direction(), Vector3.ZAxis);
+        }
+
+        public ConceptualMass(Profile boundary, List<Level> levels, Guid levelGroupId)
+        {
+            Profile = boundary?.Project(XY);
+            Boundary = boundary?.Project(XY);
+            ComputeLCS();
+            SetLevelInfo(levels, levelGroupId);
             Initialize();
         }
 
-        public void Update(MassingOverride edit, double barWidth)
+        public ConceptualMass Update(MassingOverride edit, double barWidth)
         {
-            Profile = edit.Value.Boundary ?? Profile;
-            Boundary = edit.Value.Boundary ?? Boundary;
+            Profile = edit.Value.Boundary?.Project(XY) ?? Profile;
+            Boundary = edit.Value.Boundary?.Project(XY) ?? Boundary;
             PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
-            SetLevelInfo(edit.Value.Levels ?? Levels, edit.Value.FloorToFloorHeight ?? FloorToFloorHeight);
-            if (edit.Value.FloorToFloorHeights != null)
-            {
-                SetFloorToFloorHeights(edit.Value.FloorToFloorHeights.ToList());
-            }
+            Levels = edit.Value.Levels ?? Math.Max(1, Levels);
             if (edit.Value.MassingStrategy != null)
             {
                 ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
             }
+            Identity.AddOverrideIdentity(this, edit);
+            return this;
         }
 
-        public void SetLevelInfo(int levels, double floorToFloorHeight = Constants.DEFAULT_FLOOR_TO_FLOOR)
+        public void SetLevelInfo(List<Level> levels, Guid levelGroupId)
         {
-            FloorToFloorHeight = floorToFloorHeight;
-            Levels = Math.Max(1, levels);
-            FloorToFloorHeights = new List<double>();
-            for (int i = 0; i < levels; i++)
-            {
-                FloorToFloorHeights.Add(floorToFloorHeight);
-            }
-            Height = FloorToFloorHeight * Levels;
+            LevelElements = levels;
+            LevelIds = LevelElements.Select(e => e.Id).ToList();
+            LevelGroupId = levelGroupId;
+            Levels = levels.Count;
+            Height = levels.Sum(l => l.Height ?? 0);
         }
 
         public List<Annotation> GetDimensions()
@@ -101,16 +118,22 @@ namespace Elements
             var plane = new Plane(corner, Profile.Perimeter.Segments().First().Direction().Negate());
             plane.Origin += plane.Normal * 1;
             corner.Z = elev;
-            for (int i = 0; i < FloorToFloorHeights.Count; i++)
+            foreach (var level in LevelElements)
             {
-                double f2f = this.FloorToFloorHeights[i];
-                var nextCorner = corner + (0, 0, f2f);
+                if (level.Height == null)
+                {
+                    continue;
+                }
+                var f2f = level.Height;
+                var nextCorner = corner + (0, 0, f2f.Value);
                 var alignedDim = new AlignedDimension(nextCorner, corner, plane);
                 alignedDim.AdditionalProperties["LinkedProperty"] = new Dictionary<string, object> {
                     { "ElementId", this.Id },
-                    { "OverrideName", "Massing" },
-                    { "PropertyName", "Floor To Floor Heights" },
-                    { "Index", i },
+                    { "Dependency", "Levels" },
+                    { "OverrideName", "Level Groups" },
+                    { "PropertyName", "Level Heights" },
+                    { "OverriddenElementId", LevelGroupId },
+                    { "Index", level.Index },
                     { "VisibleOnlyOnSelection", true }
                 };
                 dims.Add(alignedDim);
@@ -119,16 +142,20 @@ namespace Elements
             return dims;
         }
 
-        public List<DisplayLines> GetLevelDisplay()
+        public List<ModelLines> GetLevelDisplay()
         {
             var lines = new List<Line>();
             var transform = new Transform(this.Transform);
             var segments = Profile.Segments();
             lines.AddRange(segments.Select(s => s.TransformedLine(transform)));
-            for (int i = 0; i < FloorToFloorHeights.Count; i++)
+            foreach (var lvl in LevelElements)
             {
-                var f2f = FloorToFloorHeights[i];
-                transform.Move(0, 0, f2f);
+                if (lvl.Height == null)
+                {
+                    continue;
+                }
+                var f2f = lvl.Height;
+                transform.Move(0, 0, f2f.Value);
                 foreach (var s in segments)
                 {
                     lines.Add(s.TransformedLine(transform));
@@ -144,20 +171,89 @@ namespace Elements
                 }
                 return new[] { new Line(e.Value.Left.Vertex.Point, e.Value.Right.Vertex.Point).TransformedLine(Transform) };
             });
-            return new List<DisplayLines> { new DisplayLines(lines, 1), new DisplayLines(edges, 2) };
-        }
-        public void SetFloorToFloorHeights(List<double> heights)
-        {
-            if (heights == null || heights.Count == 0)
+            var ml1 = new ModelLines(lines.ToList())
             {
-                return;
+                Material = new Material("Level Lines")
+                {
+                    Color = CreateEnvelopes.Constants.EDGE_COLOR,
+                    EdgeDisplaySettings = new EdgeDisplaySettings
+                    {
+                        WidthMode = EdgeDisplayWidthMode.ScreenUnits,
+                        LineWidth = 1
+                    }
+                }
+            };
+            ml1.SetSelectable(false);
+            var ml2 = new ModelLines(edges.ToList())
+            {
+                Material = new Material("Level Edges")
+                {
+                    Color = CreateEnvelopes.Constants.EDGE_COLOR,
+                    EdgeDisplaySettings = new EdgeDisplaySettings
+                    {
+                        WidthMode = EdgeDisplayWidthMode.ScreenUnits,
+                        LineWidth = 2
+                    }
+                }
+            };
+            return new List<ModelLines> { ml1, ml2 };
+        }
+
+        public List<LevelVolume> GetLevelVolumes(List<ViewScope> scopes)
+        {
+            var list = new List<LevelVolume>();
+            foreach (var lvl in LevelElements)
+            {
+                if (lvl.Height == null)
+                {
+                    continue;
+                }
+                var profileInset = this.Profile.Offset(-0.05).First();
+                var representation = new Extrude(profileInset, lvl.Height.Value - 0.05, Vector3.ZAxis, false);
+
+                var levelVolume = new LevelVolume
+                {
+                    Profile = this.Profile,
+                    Height = lvl.Height.Value,
+                    Area = this.Profile.Area(),
+                    Name = lvl.Name,
+                    Representation = representation,
+                    Transform = new Transform(0, 0, lvl.Elevation),
+                    BuildingName = this.Name,
+                    Skeleton = this.Skeleton?.ToList(),
+                    PrimaryUseCategory = this.PrimaryUseCategory,
+                    Material = Constants.LEVEL_MATERIAL,
+                    Level = lvl.Id,
+                    Envelope = this.Id,
+                    AddId = $"{this.AddId}-{lvl.Id}"
+                };
+                var scopeName = levelVolume.Name;
+                if (!String.IsNullOrEmpty(levelVolume.BuildingName))
+                {
+                    scopeName = $"{levelVolume.BuildingName}: {scopeName}";
+                }
+                var bbox = new BBox3(levelVolume);
+                // drop the box by a meter to avoid ceilings / beams, etc.
+                // drop the bottom to encompass floors below
+                bbox = new BBox3(bbox.Min + (0, 0, -0.3), bbox.Max + (0, 0, -1));
+                var existingScope = scopes.FirstOrDefault((scope) => { return scope.Name == scopeName; });
+                if (existingScope == null)
+                {
+                    var scope = new ViewScope(
+                       bbox,
+                        new Camera(default, CameraNamedPosition.Top, CameraProjection.Orthographic),
+                        true,
+                        name: scopeName);
+                    levelVolume.PlanView = scope;
+                    scopes.Add(scope);
+                }
+                else
+                {
+                    existingScope.BoundingBox = new BBox3(new[] { bbox.Min, bbox.Max, existingScope.BoundingBox.Max, existingScope.BoundingBox.Min });
+                }
+                list.Add(levelVolume);
             }
-            // use the most common value for the floor to floor height
-            var modeOfHeights = heights.GroupBy(x => x).OrderByDescending(x => x.Count()).First().Key;
-            FloorToFloorHeight = modeOfHeights;
-            FloorToFloorHeights = heights;
-            Levels = FloorToFloorHeights.Count;
-            Height = FloorToFloorHeights.Sum();
+            return list;
         }
 
         public void Initialize()
@@ -215,11 +311,11 @@ namespace Elements
             }
         }
 
-        public void ApplyMassingSettings(MassingStrategySettingsOverride edit)
+        public ConceptualMass ApplyMassingSettings(MassingStrategySettingsOverride edit)
         {
-            if (MassingStrategy == "Full")
+            if (MassingStrategy == "Full" && edit.Value.Skeleton == null)
             {
-                return;
+                return this;
             }
             var val = edit.Value;
             if (val.BarWidth != null)
@@ -233,6 +329,7 @@ namespace Elements
             }
             ApplyMassingStrategy(MassingStrategy, BarWidth);
             this.AddOverrideIdentity(edit);
+            return this;
         }
 
         private void Donut(Profile p, double dist)

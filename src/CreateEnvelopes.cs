@@ -18,18 +18,16 @@ namespace CreateEnvelopes
         public static CreateEnvelopesOutputs Execute(Dictionary<string, Model> inputModels, CreateEnvelopesInputs input)
         {
             var output = new CreateEnvelopesOutputs();
+            Logging.SetLogTarget(output);
             var hasSite = inputModels.TryGetValue("Site", out var siteModel);
             var hasSiteConstraints = inputModels.TryGetValue("Site Constraints", out var siteConstraintsModel);
             var hasUnitDefinitions = inputModels.TryGetValue("Unit Definitions", out var residentialUnitsModel);
-            var barWidth = Constants.DEFAULT_BAR_WIDTH;
-            if (hasUnitDefinitions)
-            {
-                var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
-                // choose the largest depth:
-                var greatestDepth = unitDefs.Max(u => u.Depth);
-                barWidth = greatestDepth * 2 + Units.FeetToMeters(5);
-            }
-            var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, input, barWidth);
+            var levelsModel = inputModels["Levels"];
+            // Get the width of any bar masses, based on site constraints. 
+            var barWidth = ComputeBarWidth(hasSiteConstraints, siteConstraintsModel, hasUnitDefinitions, residentialUnitsModel);
+            // generate default masses based on sites + site constraints
+            var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, levelsModel, input, barWidth);
+            // process add / edit overrides for Masses
             var addIds = new List<string>();
             var overriddenMasses = input.Overrides.Massing.CreateElements(
                 input.Overrides.Additions.Massing,
@@ -40,31 +38,80 @@ namespace CreateEnvelopes
                     addIds.Add(env.AddId);
                     return env;
                 },
-                (elem, identity) =>
-                {
-                    return elem.AddId == identity.AddId;
-                },
-                (elem, edit) =>
-                {
-                    elem.Update(edit, barWidth);
-
-                    return elem;
-                }).ToDictionary((env) => env.AddId);
+                (elem, identity) => elem.AddId == identity.AddId,
+                (elem, edit) => elem.Update(edit, barWidth)
+                ).ToDictionary((env) => env.AddId);
+            // ensure ordering of masses follows ordering of addition, so that
+            // stacking later works in a predictable way.
             var orderedAddedMasses = addIds.Select((id) => overriddenMasses[id]);
             masses.AddRange(orderedAddedMasses);
+            // Apply "massing strategy settings" overrides, to set skeleton
+            // changes and override bar width.
             input.Overrides.MassingStrategySettings.Apply(
                 masses,
                 (elem, identity) => elem.AddId == identity.AddId,
-                (elem, edit) =>
-                {
-                    elem.ApplyMassingSettings(edit);
-                    return elem;
-                });
-            StackMasses(masses);
+                (elem, edit) => elem.ApplyMassingSettings(edit)
+                );
+            // Later masses that are contained by earlier masses should be "on
+            // top of" those earlier masses, so calculate their transforms, and
+            // copy any unset properties upwards (like Skeleton or Building
+            // association).
+            var buildings = StackMasses(masses, levelsModel);
+            // Apply building name overrides, and update mass names to match their building
+            var overriddenBuildings = input.Overrides.BuildingInfo.Apply(
+                buildings,
+                (bldg, identity) => bldg.MassAddIds.Any(id => identity.MassAddIds.Any(massId => massId == id)),
+                (bldg, edit) => bldg.Update(edit, masses));
             output.Model.AddElements(masses);
+            output.Model.AddElements(overriddenBuildings);
             output.Model.AddElements(masses.SelectMany(e => e.GetDimensions()));
             output.Model.AddElements(masses.SelectMany(e => e.GetLevelDisplay()));
+            var scopes = new List<ViewScope>();
+            var levelVolumes = masses.SelectMany(e => e.GetLevelVolumes(scopes)).ToList();
+            levelVolumes = input.Overrides.LevelSettings.Apply(
+                levelVolumes,
+                (elem, identity) => elem.AddId == identity.AddId,
+                (elem, edit) => elem.Update(edit));
+            output.Model.AddElements(levelVolumes);
+            output.Model.AddElements(scopes);
             return output;
+        }
+
+        private static double ComputeBarWidth(bool hasSiteConstraints, Model siteConstraintsModel, bool hasUnitDefinitions, Model residentialUnitsModel)
+        {
+            var barWidth = Constants.DEFAULT_BAR_WIDTH;
+            if (hasUnitDefinitions)
+            {
+                double? balconyOffset = null;
+                if (hasSiteConstraints)
+                {
+                    var setbacks = siteConstraintsModel.AllElementsOfType<Setback>();
+                    var setbacksWithBalconyRule = setbacks.Where(s => s.BalconyProtrusionDepth != null);
+                    if (setbacksWithBalconyRule.Count() > 0)
+                    {
+                        balconyOffset = setbacksWithBalconyRule.Max(s => s.BalconyProtrusionDepth.Value);
+                    }
+                }
+                var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
+                // choose the largest depth. Include balconies if balconyOffset != null. 
+                var greatestDepth = unitDefs.Max(u =>
+                {
+                    if (balconyOffset != null)
+                    {
+                        residentialUnitsModel.Elements.TryGetValue(u.Balcony, out var balcony);
+                        if (balcony != null)
+                        {
+                            var bbox = new BBox3(balcony);
+                            var bDepth = bbox.Max.Y - bbox.Min.Y;
+                            return u.Depth + bDepth - balconyOffset.Value;
+                        }
+                    }
+                    return u.Depth;
+                });
+                barWidth = greatestDepth * 2 + Units.FeetToMeters(5);
+            }
+
+            return barWidth;
         }
 
         public static Site CreateDefaultSite()
@@ -73,35 +120,40 @@ namespace CreateEnvelopes
             return new Site(rect, rect.Area());
         }
 
-        public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, CreateEnvelopesInputs input, double barWidth)
+        public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, Model levelsModel, CreateEnvelopesInputs input, double barWidth)
         {
             var removedAddIds = new HashSet<string>(input.Overrides.Removals.Massing.Select((r) => r.Identity.AddId));
             var overridesByAddId = input.Overrides.Massing.ToDictionary((o) => o.Identity.AddId);
-
             var list = new List<ConceptualMass>();
-            var sites = siteModel?.AllElementsOfType<Site>() ?? new List<Site>() { CreateDefaultSite() };
+            var sites = siteModel?.AllElementsOfType<Site>() ?? new List<Site>();
+
             var allSetbacks = siteConstraintsModel?.AllElementsOfType<Setback>() ?? new List<Setback>();
             var allSiteConstraints = siteConstraintsModel?.AllElementsOfType<SiteConstraintInfo>() ?? new List<SiteConstraintInfo>();
+            var allLevelGroups = levelsModel.AllElementsOfType<LevelGroup>();
             foreach (var site in sites)
             {
                 var setbacksForSite = allSetbacks.Where(s => s.Site == site.Id).ToList();
                 var constraintForSite = allSiteConstraints.FirstOrDefault(s => s.Site == site.Id);
-                var elevationChanges = new HashSet<double>();
-                elevationChanges.Add(0.0);
+                var levelGroupForSite = allLevelGroups.FirstOrDefault(l => l.Site == site.Id) ?? allLevelGroups.First();
+                var elevationChanges = new HashSet<double>
+                {
+                    0.0
+                };
                 foreach (var setback in setbacksForSite)
                 {
                     elevationChanges.Add(setback.StartingHeight);
                 }
-                var maxHeight = constraintForSite?.MaxHeight ?? Constants.DEFAULT_MAX_HEIGHT;
+                var maxHeight = levelGroupForSite.MaxHeight ?? constraintForSite?.MaxHeight ?? Constants.DEFAULT_MAX_HEIGHT;
                 elevationChanges.Add(maxHeight);
                 var elevationChangesSorted = elevationChanges.OrderBy(e => e).ToList();
                 // If we create a volume that's less than the intended height
                 // because of floor-to-floor, pass on the remainder to the next
                 // envelope.
                 var leftoverHeight = 0.0;
+                var levelsUsed = 0;
                 for (int i = 0; i < elevationChangesSorted.Count - 1; i++)
                 {
-                    var addId = $"{site.AddId ?? site.Perimeter.Centroid().ToString()}-{i}";
+                    var addId = $"{site.AddId ?? $"{site.GenerateNewAddId()}"}-{i}";
 
                     var curr = elevationChangesSorted[i];
                     var next = elevationChangesSorted[i + 1];
@@ -113,15 +165,14 @@ namespace CreateEnvelopes
                         continue;
                     }
                     Profile baseProfile = null;
-                    double? floorToFloor = null;
-                    int? levels = null;
+
+                    List<Level> levels = levelGroupForSite.GetLevelsUpToHeight(next, levelsUsed);
                     var strategy = "Full";
                     var primaryUseCategory = "Office";
                     // Override Edits
                     if (overridesByAddId.TryGetValue(addId, out var overrideVal))
                     {
-                        floorToFloor = overrideVal.Value.FloorToFloorHeight ?? Constants.DEFAULT_FLOOR_TO_FLOOR;
-                        levels = overrideVal.Value.Levels ?? (int)Math.Floor(envHeight / floorToFloor.Value);
+                        levels = overrideVal.Value.Levels.HasValue ? levelGroupForSite.GetNLevels(overrideVal.Value.Levels.Value, levelsUsed) : levelGroupForSite.GetLevelsUpToHeight(next, levelsUsed);
                         baseProfile = overrideVal.Value.Boundary;
                         if (overrideVal.Value.MassingStrategy != null)
                         {
@@ -130,23 +181,21 @@ namespace CreateEnvelopes
                         // if the user has chosen a strategy other than "Full", and not set a primary use category, let's assume residential, since bars typically are.
                         primaryUseCategory = overrideVal.Value.PrimaryUseCategory ?? (overrideVal.Value.MassingStrategy != null ? "Residential" : "Office");
                     }
+                    levelsUsed += levels.Count;
+
                     // Default profile behavior
                     var setbacksAtHeight = setbacksForSite.Where(s => curr >= s.StartingHeight).ToList();
                     baseProfile ??= CreateProfileFromSetbacks(site.Perimeter, setbacksAtHeight);
-                    var env = new ConceptualMass(baseProfile, envHeight, floorToFloor, levels)
+                    var env = new ConceptualMass(baseProfile, levels, levelGroupForSite.Id)
                     {
                         AddId = addId,
                         PrimaryUseCategory = primaryUseCategory,
                     };
-                    env.ApplyMassingStrategy(strategy, barWidth);
-                    // More Override Edits
                     if (overrideVal != null)
                     {
-                        if (overrideVal.Value.FloorToFloorHeights != null)
-                        {
-                            env.SetFloorToFloorHeights(overrideVal.Value.FloorToFloorHeights.ToList());
-                        }
+                        Identity.AddOverrideIdentity(env, overrideVal);
                     }
+                    env.ApplyMassingStrategy(strategy, barWidth);
                     leftoverHeight = envHeight - env.Height;
                     list.Add(env);
                 }
@@ -226,21 +275,57 @@ namespace CreateEnvelopes
             return profile;
         }
 
-        public static void StackMasses(List<ConceptualMass> envelopes)
+        public static List<Building> StackMasses(List<ConceptualMass> envelopes, Model levelsModel)
         {
+            var buildings = new List<Building>();
+            var levelGroups = levelsModel.AllElementsOfType<LevelGroup>();
+            // TODO — permit picking the best level group based on site proximity, etc.
+            var levelGroupForNewEnvelopes = levelGroups.FirstOrDefault();
+            if (levelGroupForNewEnvelopes == null)
+            {
+                return buildings;
+            }
             var seenMasses = new List<ConceptualMass>();
             foreach (var e in envelopes)
             {
+                var levelOffset = 0;
                 foreach (var se in seenMasses)
                 {
                     if (se.Profile.Perimeter.Intersects(e.Profile.Perimeter))
                     {
                         e.Transform.Move((0, 0, se.Height));
                         e.Elevation = e.Transform.Origin.Z;
+                        levelOffset += se.Levels;
+                        if (se.Skeleton != null && e.Skeleton == null)
+                        {
+                            e.Skeleton = se.Skeleton;
+                            e.ApplyMassingStrategy("Custom", se.BarWidth);
+                        }
+                        if (se.Building != null && e.Building == null)
+                        {
+                            e.Building = se.Building;
+                            buildings.FirstOrDefault(b => b.Id == se.Building).MassAddIds.Add(e.AddId);
+                        }
                     }
+                }
+                if (e.LevelElements.Count == 0)
+                {
+                    var levelsForEnvelope = levelGroupForNewEnvelopes.GetNLevels(e.Levels, levelOffset);
+                    e.SetLevelInfo(levelsForEnvelope, levelGroupForNewEnvelopes.Id);
+                }
+                if (e.Building == null)
+                {
+                    var building = new Building
+                    {
+                        Name = $"Building {buildings.Count + 1}"
+                    };
+                    building.MassAddIds.Add(e.AddId);
+                    buildings.Add(building);
+                    e.Building = building.Id;
                 }
                 seenMasses.Add(e);
             }
+            return buildings;
         }
     }
 }
