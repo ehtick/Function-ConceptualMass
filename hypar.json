@@ -60,12 +60,57 @@
                 "$ref": "https://hypar.io/Schemas/Geometry/Line.json"
               }
             },
-            "Levels": {
-              "type": "integer",
-              "$hyparOrder": 3,
-              "description": "How many levels should this portion of the mass be?",
-              "minimum": 1,
-              "default": 1
+            "Top Level": {
+              "description": "The level for the top of the envelope. If left unset, will use the highest level.",
+              "$hyparPickElement": {
+                "dependency": "Levels",
+                "context": "[*discriminator=Elements.Level]"
+              },
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "Id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "Elevation": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "default": null
+            },
+            "Bottom Level": {
+              "description": "The level for the top of the envelope. If left unset, will use the ground level or the top level of any mass below.",
+              "$hyparPickElement": {
+                "dependency": "Levels",
+                "context": "[*discriminator=Elements.Level]"
+              },
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "Id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "Elevation": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "default": null
             },
             "Mode": {
               "type": "string",
@@ -77,6 +122,7 @@
               ]
             },
             "Primary Use Category": {
+              "description": "What is the primary use for this mass? You can still set different uses for specific levels or spaces.",
               "type": [
                 "string",
                 "null"
@@ -104,21 +150,6 @@
       "paradigm": "edit",
       "perProperty": true,
       "schema": {
-        "Boundary": {
-          "$hyparOrder": 1,
-          "$hyparRelativeToTransform": true,
-          "$ref": "https://prod-api.hypar.io/schemas/Profile",
-          "description": "The extents of the mass. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option."
-        },
-        "Levels": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "$hyparOrder": 2,
-          "description": "How many levels should this portion of the mass be?",
-          "minimum": 1
-        },
         "Massing Strategy": {
           "type": [
             "string",
@@ -134,7 +165,62 @@
             "Bar"
           ]
         },
+        "Boundary": {
+          "$hyparOrder": 1,
+          "$hyparRelativeToTransform": true,
+          "$ref": "https://prod-api.hypar.io/schemas/Profile",
+          "description": "The extents of the mass. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option."
+        },
+        "Top Level": {
+          "$hyparPickElement": {
+            "dependency": "Levels",
+            "context": "[*discriminator=Elements.Level]"
+          },
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "Id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "Elevation": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "Bottom Level": {
+          "$hyparPickElement": {
+            "dependency": "Levels",
+            "context": "[*discriminator=Elements.Level]"
+          },
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "Id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "Elevation": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
         "Primary Use Category": {
+          "description": "What is the primary use for this mass? You can still set different uses for specific levels or spaces.",
           "type": "string",
           "$hyparAutocomplete": [
             "Residential",
@@ -156,7 +242,7 @@
     },
     "Massing Strategy Settings": {
       "$hyparOrder": 1,
-      "context": "[*discriminator=Elements.ConceptualMass&Massing Strategy!=Full]",
+      "context": "[*discriminator=Elements.ConceptualMass]",
       "identity": {
         "Add Id": {
           "type": "string"
@@ -214,6 +300,7 @@
       },
       "schema": {
         "Primary Use Category": {
+          "description": "What is the primary use for this level? This can differ from the primary use of the mass overall.",
           "type": [
             "string",
             "null"
@@ -239,7 +326,12 @@
     "https://prod-api.hypar.io/schemas/LevelVolume",
     "https://prod-api.hypar.io/schemas/ViewScope"
   ],
-  "repository_url": "https://github.com/hypar-io/function",
+  "filters": {
+    "Levels Only": {
+      "context": "[*discriminator=Elements.LevelVolume]"
+    }
+  },
+  "repository_url": "https://github.com/hypar-io/Function-ConceptualMass",
   "last_updated": "0001-01-01T00:00:00",
   "cli_version": "1.2.0-alpha.4",
   "messages": {

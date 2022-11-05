@@ -10,6 +10,8 @@ namespace CreateEnvelopes
         public const double DEFAULT_FLOOR_TO_FLOOR = 11 * FeetToMeters;
         public const double DEFAULT_BAR_WIDTH = (27 * FeetToMeters) * 2 + (5 * FeetToMeters);
 
+        public const double MIN_PARALLEL_DIST = 100 * FeetToMeters;
+
         public const int DEFAULT_LEVEL_COUNT = 1;
 
         public static Color ENVELOPE_COLOR = new Color("#799FBB") { Alpha = 0.3 };

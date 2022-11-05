@@ -12,7 +12,7 @@ namespace CreateEnvelopes
 	{
         public static string Name = "Massing Strategy Settings";
         public static string Dependency = null;
-        public static string Context = "[*discriminator=Elements.ConceptualMass&Massing Strategy!=Full]";
+        public static string Context = "[*discriminator=Elements.ConceptualMass]";
 		public static string Paradigm = "Edit";
 
         /// <summary>

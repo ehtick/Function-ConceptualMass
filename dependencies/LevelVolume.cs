@@ -21,8 +21,6 @@ namespace Elements
         [JsonProperty("Primary Use Category")]
         public string PrimaryUseCategory { get; set; }
 
-        public Guid Level { get; set; }
-
         public LevelVolume Update(LevelSettingsOverride edit)
         {
             PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;

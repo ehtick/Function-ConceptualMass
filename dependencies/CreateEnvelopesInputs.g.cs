@@ -397,17 +397,18 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingValue(Profile @boundary, int? @levels, MassingValueMassingStrategy? @massingStrategy, string @primaryUseCategory)
+        public MassingValue(MassingValueMassingStrategy? @massingStrategy, Profile @boundary, MassingValueTopLevel @topLevel, MassingValueBottomLevel @bottomLevel, string @primaryUseCategory)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @boundary, @levels, @massingStrategy, @primaryUseCategory});
+                validator.PreConstruct(new object[]{ @massingStrategy, @boundary, @topLevel, @bottomLevel, @primaryUseCategory});
             }
         
-            this.Boundary = @boundary;
-            this.Levels = @levels;
             this.MassingStrategy = @massingStrategy;
+            this.Boundary = @boundary;
+            this.TopLevel = @topLevel;
+            this.BottomLevel = @bottomLevel;
             this.PrimaryUseCategory = @primaryUseCategory;
         
             if(validator != null)
@@ -416,19 +417,21 @@ namespace CreateEnvelopes
             }
         }
     
-        /// <summary>The extents of the mass. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
-        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Profile Boundary { get; set; }
-    
-        /// <summary>How many levels should this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(1D, double.MaxValue)]
-        public int? Levels { get; set; }
-    
         [Newtonsoft.Json.JsonProperty("Massing Strategy", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public MassingValueMassingStrategy? MassingStrategy { get; set; }
     
+        /// <summary>The extents of the mass. If using a massing strategy other than "Full", this denotes the boundary which constrains the massing option.</summary>
+        [Newtonsoft.Json.JsonProperty("Boundary", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Profile Boundary { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Top Level", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingValueTopLevel TopLevel { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Bottom Level", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingValueBottomLevel BottomLevel { get; set; }
+    
+        /// <summary>What is the primary use for this mass? You can still set different uses for specific levels or spaces.</summary>
         [Newtonsoft.Json.JsonProperty("Primary Use Category", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string PrimaryUseCategory { get; set; }
     
@@ -595,6 +598,7 @@ namespace CreateEnvelopes
             }
         }
     
+        /// <summary>What is the primary use for this level? This can differ from the primary use of the mass overall.</summary>
         [Newtonsoft.Json.JsonProperty("Primary Use Category", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string PrimaryUseCategory { get; set; }
     
@@ -606,17 +610,18 @@ namespace CreateEnvelopes
     
     {
         [Newtonsoft.Json.JsonConstructor]
-        public MassingOverrideAdditionValue(Profile @boundary, IList<Line> @centerline, int @levels, MassingOverrideAdditionValueMode @mode, string @primaryUseCategory)
+        public MassingOverrideAdditionValue(Profile @boundary, IList<Line> @centerline, MassingOverrideAdditionValueTopLevel @topLevel, MassingOverrideAdditionValueBottomLevel @bottomLevel, MassingOverrideAdditionValueMode @mode, string @primaryUseCategory)
         {
             var validator = Validator.Instance.GetFirstValidatorForType<MassingOverrideAdditionValue>();
             if(validator != null)
             {
-                validator.PreConstruct(new object[]{ @boundary, @centerline, @levels, @mode, @primaryUseCategory});
+                validator.PreConstruct(new object[]{ @boundary, @centerline, @topLevel, @bottomLevel, @mode, @primaryUseCategory});
             }
         
             this.Boundary = @boundary;
             this.Centerline = @centerline;
-            this.Levels = @levels;
+            this.TopLevel = @topLevel ?? this.TopLevel;
+            this.BottomLevel = @bottomLevel ?? this.BottomLevel;
             this.Mode = @mode;
             this.PrimaryUseCategory = @primaryUseCategory;
         
@@ -633,15 +638,19 @@ namespace CreateEnvelopes
         [Newtonsoft.Json.JsonProperty("Centerline", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public IList<Line> Centerline { get; set; }
     
-        /// <summary>How many levels should this portion of the mass be?</summary>
-        [Newtonsoft.Json.JsonProperty("Levels", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
-        public int Levels { get; set; } = 1;
+        /// <summary>The level for the top of the envelope. If left unset, will use the highest level.</summary>
+        [Newtonsoft.Json.JsonProperty("Top Level", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingOverrideAdditionValueTopLevel TopLevel { get; set; }
+    
+        /// <summary>The level for the top of the envelope. If left unset, will use the ground level or the top level of any mass below.</summary>
+        [Newtonsoft.Json.JsonProperty("Bottom Level", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public MassingOverrideAdditionValueBottomLevel BottomLevel { get; set; }
     
         [Newtonsoft.Json.JsonProperty("Mode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public MassingOverrideAdditionValueMode Mode { get; set; } = MassingOverrideAdditionValueMode.Boundary;
     
+        /// <summary>What is the primary use for this mass? You can still set different uses for specific levels or spaces.</summary>
         [Newtonsoft.Json.JsonProperty("Primary Use Category", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string PrimaryUseCategory { get; set; }
     
@@ -668,6 +677,162 @@ namespace CreateEnvelopes
         [System.Runtime.Serialization.EnumMember(Value = @"Bar")]
         Bar = 5,
     
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingValueTopLevel 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingValueTopLevel(string @id, double? @elevation)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingValueTopLevel>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @id, @elevation});
+            }
+        
+            this.Id = @id;
+            this.Elevation = @elevation;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Elevation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? Elevation { get; set; }
+    
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties = new System.Collections.Generic.Dictionary<string, object>();
+    
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties; }
+            set { _additionalProperties = value; }
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingValueBottomLevel 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingValueBottomLevel(string @id, double? @elevation)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingValueBottomLevel>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @id, @elevation});
+            }
+        
+            this.Id = @id;
+            this.Elevation = @elevation;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Elevation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? Elevation { get; set; }
+    
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties = new System.Collections.Generic.Dictionary<string, object>();
+    
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties; }
+            set { _additionalProperties = value; }
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingOverrideAdditionValueTopLevel 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingOverrideAdditionValueTopLevel(string @id, double? @elevation)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingOverrideAdditionValueTopLevel>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @id, @elevation});
+            }
+        
+            this.Id = @id;
+            this.Elevation = @elevation;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Elevation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? Elevation { get; set; }
+    
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties = new System.Collections.Generic.Dictionary<string, object>();
+    
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties; }
+            set { _additionalProperties = value; }
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]
+    
+    public partial class MassingOverrideAdditionValueBottomLevel 
+    
+    {
+        [Newtonsoft.Json.JsonConstructor]
+        public MassingOverrideAdditionValueBottomLevel(string @id, double? @elevation)
+        {
+            var validator = Validator.Instance.GetFirstValidatorForType<MassingOverrideAdditionValueBottomLevel>();
+            if(validator != null)
+            {
+                validator.PreConstruct(new object[]{ @id, @elevation});
+            }
+        
+            this.Id = @id;
+            this.Elevation = @elevation;
+        
+            if(validator != null)
+            {
+                validator.PostConstruct(this);
+            }
+        }
+    
+        [Newtonsoft.Json.JsonProperty("Id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("Elevation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? Elevation { get; set; }
+    
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties = new System.Collections.Generic.Dictionary<string, object>();
+    
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties; }
+            set { _additionalProperties = value; }
+        }
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.1.21.0 (Newtonsoft.Json v12.0.0.0)")]

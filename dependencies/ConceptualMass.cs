@@ -10,12 +10,57 @@ using Elements.Annotations;
 
 namespace Elements
 {
+
+    public class LevelReference
+    {
+        public string Id { get; set; }
+        public double Elevation { get; set; }
+
+        public LevelReference()
+        {
+
+        }
+
+
+        public LevelReference(MassingOverrideAdditionValueTopLevel topLevel)
+        {
+            Id = topLevel?.Id;
+            Elevation = topLevel?.Elevation ?? 0.0;
+        }
+
+        public LevelReference(MassingOverrideAdditionValueBottomLevel bottomLevel)
+        {
+            Id = bottomLevel?.Id;
+            Elevation = bottomLevel?.Elevation ?? 0.0;
+        }
+
+        public LevelReference(Level level)
+        {
+            Id = level?.Id.ToString();
+            Elevation = level?.Elevation ?? 0.0;
+        }
+
+        internal void Update(MassingValueTopLevel topLevel)
+        {
+            Id = topLevel?.Id ?? Id;
+            Elevation = topLevel?.Elevation ?? Elevation;
+        }
+
+        internal void Update(MassingValueBottomLevel bottomLevel)
+        {
+            Id = bottomLevel?.Id ?? Id;
+            Elevation = bottomLevel?.Elevation ?? Elevation;
+        }
+    }
     public partial class ConceptualMass
     {
         [JsonProperty("Add Id")]
         public string AddId { get; set; }
+        [JsonProperty("Top Level")]
+        public LevelReference TopLevel { get; set; }
 
-        public int Levels { get; set; }
+        [JsonProperty("Bottom Level")]
+        public LevelReference BottomLevel { get; set; }
 
         [JsonProperty("Massing Strategy")]
         public string MassingStrategy { get; set; } = "Full";
@@ -54,7 +99,9 @@ namespace Elements
 
 
             AddId = add.Id;
-            Levels = Math.Max(1, add.Value.Levels);
+            TopLevel = new LevelReference(add.Value.TopLevel);
+            BottomLevel = new LevelReference(add.Value.BottomLevel);
+
             if (add.Value.Mode == MassingOverrideAdditionValueMode.Centerline)
             {
                 Skeleton = add.Value.Centerline.ToList();
@@ -71,17 +118,17 @@ namespace Elements
 
         private void ComputeLCS()
         {
-            var lcsLocation = Profile?.Perimeter?.Centroid() ?? Skeleton.Select(sk => sk.PointAt(0.5)).Aggregate((a, b) => a + b) / Skeleton.Count;
-            var longestEdge = (Profile?.Perimeter?.Segments() ?? Skeleton).OrderByDescending(s => s.Length()).First();
+            var lcsLocation = Profile?.Perimeter?.Centroid() ?? Skeleton?.Select(sk => sk.PointAt(0.5)).Aggregate((a, b) => a + b) / (Skeleton?.Count) ?? (0, 0);
+            var longestEdge = (Profile?.Perimeter?.Segments().ToList() ?? Skeleton ?? new List<Line>()).OrderByDescending(s => s.Length()).FirstOrDefault() ?? new Line((0, 0), (1, 0));
             LocalCoordinateSystem = new Transform(lcsLocation, longestEdge.Direction(), Vector3.ZAxis);
         }
 
-        public ConceptualMass(Profile boundary, List<Level> levels, Guid levelGroupId)
+        public ConceptualMass(Profile boundary, List<Level> levels, LevelGroup levelGroup)
         {
             Profile = boundary?.Project(XY);
             Boundary = boundary?.Project(XY);
             ComputeLCS();
-            SetLevelInfo(levels, levelGroupId);
+            SetLevelInfo(levels, levelGroup);
             Initialize();
         }
 
@@ -90,22 +137,31 @@ namespace Elements
             Profile = edit.Value.Boundary?.Project(XY) ?? Profile;
             Boundary = edit.Value.Boundary?.Project(XY) ?? Boundary;
             PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
-            Levels = edit.Value.Levels ?? Math.Max(1, Levels);
+
+            TopLevel.Update(edit.Value.TopLevel);
+            BottomLevel.Update(edit.Value.BottomLevel);
+
             if (edit.Value.MassingStrategy != null)
             {
                 ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+            }
+            else if (MassingStrategy == "Custom")
+            {
+                // Reapply to trim with a newly modified profile.
+                ApplyMassingStrategy("Custom", barWidth);
             }
             Identity.AddOverrideIdentity(this, edit);
             return this;
         }
 
-        public void SetLevelInfo(List<Level> levels, Guid levelGroupId)
+        public void SetLevelInfo(List<Level> levels, LevelGroup levelGroup)
         {
+            TopLevel = new LevelReference(levels.Last());
+            BottomLevel = new LevelReference(levels.First());
             LevelElements = levels;
             LevelIds = LevelElements.Select(e => e.Id).ToList();
-            LevelGroupId = levelGroupId;
-            Levels = levels.Count;
-            Height = levels.Sum(l => l.Height ?? 0);
+            LevelGroupId = levelGroup.Id;
+            Height = levels.SkipLast(1).Sum(l => l.Height ?? 0);
         }
 
         public List<Annotation> GetDimensions()
@@ -118,7 +174,7 @@ namespace Elements
             var plane = new Plane(corner, Profile.Perimeter.Segments().First().Direction().Negate());
             plane.Origin += plane.Normal * 1;
             corner.Z = elev;
-            foreach (var level in LevelElements)
+            foreach (var level in LevelElements.SkipLast(1))
             {
                 if (level.Height == null)
                 {
@@ -148,7 +204,7 @@ namespace Elements
             var transform = new Transform(this.Transform);
             var segments = Profile.Segments();
             lines.AddRange(segments.Select(s => s.TransformedLine(transform)));
-            foreach (var lvl in LevelElements)
+            foreach (var lvl in LevelElements.SkipLast(1))
             {
                 if (lvl.Height == null)
                 {
@@ -202,7 +258,7 @@ namespace Elements
         public List<LevelVolume> GetLevelVolumes(List<ViewScope> scopes)
         {
             var list = new List<LevelVolume>();
-            foreach (var lvl in LevelElements)
+            foreach (var lvl in LevelElements.SkipLast(1))
             {
                 if (lvl.Height == null)
                 {
@@ -224,6 +280,7 @@ namespace Elements
                     PrimaryUseCategory = this.PrimaryUseCategory,
                     Material = Constants.LEVEL_MATERIAL,
                     Level = lvl.Id,
+                    Mass = this.Id,
                     Envelope = this.Id,
                     AddId = $"{this.AddId}-{lvl.Id}"
                 };
@@ -358,7 +415,7 @@ namespace Elements
             var perim = p.Perimeter;
             var vertices = perim.Vertices;
             Polyline bestPl = null;
-            var length = 0.0;
+            var bestScore = Double.MinValue;
             if (vertices.Count < n + 1)
             {
                 Profile = p;
@@ -375,10 +432,17 @@ namespace Elements
                 var nextVertex = (i + 1) % vertices.Count;
                 var nextNextVertex = (i + 2) % vertices.Count;
                 var polyline = new Polyline(verts);
-                if (bestPl == null || polyline.Length() > length)
+                var score = polyline.Length();
+                // prefer solutions that keep the ends further apart
+                if (polyline.Start.DistanceTo(polyline.End) < dist * 4)
+                {
+                    var penalty = (dist * 4) - polyline.Start.DistanceTo(polyline.End);
+                    score -= penalty * 3;
+                }
+                if (bestPl == null || score > bestScore)
                 {
                     bestPl = polyline;
-                    length = polyline.Length();
+                    bestScore = score;
                 }
             }
             var offset = bestPl.OffsetOpen(dist / 2);
