@@ -27,7 +27,7 @@ namespace Elements
     public partial class Camera 
     {
         [JsonConstructor]
-        public Camera(Vector3 @angle, CameraNamedPosition? @namedPosition, CameraProjection @projection)
+        public Camera(Vector3 @angle, CameraNamedPosition? @namedPosition, CameraProjection? @projection)
         {
             this.Angle = @angle;
             this.NamedPosition = @namedPosition;
@@ -49,9 +49,9 @@ namespace Elements
         public CameraNamedPosition? NamedPosition { get; set; }
     
         /// <summary>How the camera collapses the 3d scene into a 2d image</summary>
-        [JsonProperty("projection", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [JsonProperty("projection", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public CameraProjection Projection { get; set; }
+        public CameraProjection? Projection { get; set; }
     
     
     }

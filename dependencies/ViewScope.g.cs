@@ -27,12 +27,15 @@ namespace Elements
     public partial class ViewScope : Element
     {
         [JsonConstructor]
-        public ViewScope(BBox3 @boundingBox, Camera @camera, bool? @lockRotation, System.Guid @id = default, string @name = null)
+        public ViewScope(BBox3 @boundingBox, Camera @camera, bool? @lockRotation, bool? @clipWithBoundingBox, bool? @modal, System.Collections.Generic.IDictionary<string, SystemVisibilityState> @functionVisibility, System.Guid @id = default, string @name = null)
             : base(id, name)
         {
             this.BoundingBox = @boundingBox;
             this.Camera = @camera;
             this.LockRotation = @lockRotation;
+            this.ClipWithBoundingBox = @clipWithBoundingBox;
+            this.Modal = @modal;
+            this.FunctionVisibility = @functionVisibility;
             }
         
         // Empty constructor
@@ -52,6 +55,17 @@ namespace Elements
         /// <summary>Whether this scope should lock view rotation. True to lock, False to unlock, and null to leave unchanged.</summary>
         [JsonProperty("Lock Rotation", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool? LockRotation { get; set; }
+    
+        /// <summary>Whether this scope should clip to the specified bounding box. If false, it only zooms to the bounding box without clipping.</summary>
+        [JsonProperty("Clip With Bounding Box", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? ClipWithBoundingBox { get; set; }
+    
+        /// <summary>If true, when the user exits this scope, they'll return to their previous camera settings.</summary>
+        [JsonProperty("Modal", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool? Modal { get; set; }
+    
+        [JsonProperty("Function Visibility", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.IDictionary<string, SystemVisibilityState> FunctionVisibility { get; set; }
     
     
     }

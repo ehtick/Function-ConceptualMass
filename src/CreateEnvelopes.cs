@@ -52,7 +52,7 @@ namespace CreateEnvelopes
                 (elem, edit) => elem.ApplyMassingSettings(edit)
                 );
             masses = masses.OrderBy(m => m.BottomLevel.Elevation).ToList();
-            var buildings = StackMasses(masses, levelsModel);
+            var buildings = StackMasses(masses, levelsModel, hasUnitDefinitions ? "Residential" : "Office");
             // Apply building name overrides, and update mass names to match their building
             var overriddenBuildings = input.Overrides.BuildingInfo.Apply(
                 buildings,
@@ -164,7 +164,7 @@ namespace CreateEnvelopes
 
                     List<Level> levels = levelGroupForSite.GetLevelsUpToHeight(next, lastLevelUsed);
                     var strategy = "Full";
-                    var primaryUseCategory = "Office";
+                    string primaryUseCategory = null;
                     // Override Edits
                     if (overridesByAddId.TryGetValue(addId, out var overrideVal))
                     {
@@ -180,7 +180,7 @@ namespace CreateEnvelopes
                             strategy = Hypar.Model.Utilities.GetStringValueFromEnum(overrideVal.Value.MassingStrategy);
                         }
                         // if the user has chosen a strategy other than "Full", and not set a primary use category, let's assume residential, since bars typically are.
-                        primaryUseCategory = overrideVal.Value.PrimaryUseCategory ?? (overrideVal.Value.MassingStrategy != null ? "Residential" : "Office");
+                        primaryUseCategory = overrideVal.Value.PrimaryUseCategory ?? (overrideVal.Value.MassingStrategy != null ? "Residential" : primaryUseCategory);
                     }
                     lastLevelUsed = levels.Last();
 
@@ -276,7 +276,7 @@ namespace CreateEnvelopes
             return profile;
         }
 
-        public static List<Building> StackMasses(List<ConceptualMass> envelopes, Model levelsModel)
+        public static List<Building> StackMasses(List<ConceptualMass> envelopes, Model levelsModel, string defaultUseCategory)
         {
             var buildings = new List<Building>();
             var levelGroups = levelsModel.AllElementsOfType<LevelGroup>();
@@ -289,29 +289,39 @@ namespace CreateEnvelopes
             var seenMasses = new List<ConceptualMass>();
             foreach (var e in envelopes)
             {
-                // if a user added a profile but set neither centerline nor profile, just make it a dumb box.
+                // if a user added an envelope but set neither centerline nor profile, just make it a dumb box.
                 if (e.Profile == null)
                 {
                     e.Profile = Polygon.Rectangle(30, 30);
                     e.Boundary = e.Profile;
                 }
                 var greatestHeightOfSeenMasses = 0.0;
-                foreach (var se in seenMasses)
+                // walk seenMasses backwards, so that we prefer propagating
+                // settings from the last envelope that was added to the stack.
+                for (int i = seenMasses.Count - 1; i >= 0; i--)
                 {
+                    var se = seenMasses[i];
+                    // If the current mass intersects the seen mass, stack on top of it, and propagate settings upwards.
                     if (se.Profile.Perimeter.Intersects(e.Profile.Perimeter))
                     {
-                        // e.Transform.Move((0, 0, se.Height));
-                        // e.Elevation = e.Transform.Origin.Z;
+                        // keep track of the greatest height we've seen. 
                         var heightOfMass = se.Elevation + se.Height;
                         if (heightOfMass > greatestHeightOfSeenMasses)
                         {
                             greatestHeightOfSeenMasses = heightOfMass;
                         }
+                        // If the seen mass has a skeleton and we do not, propagate that skeleton to this mass.
                         if (se.Skeleton != null && e.Skeleton == null)
                         {
                             e.Skeleton = se.Skeleton;
                             e.ApplyMassingStrategy("Custom", se.BarWidth);
                         }
+                        // if the seen mass has a use category and we do not, propagate that use category to this mass.
+                        if (se.PrimaryUseCategory != null && e.PrimaryUseCategory == null)
+                        {
+                            e.PrimaryUseCategory = se.PrimaryUseCategory;
+                        }
+                        // if the seen mass has a building assignment and we do not, propagate that building assignment to this mass.
                         if (se.Building != null && e.Building == null)
                         {
                             e.Building = se.Building;
@@ -319,15 +329,25 @@ namespace CreateEnvelopes
                         }
                     }
                 }
+                // if we have no levels assigned yet, assign them automatically.
                 if (e.LevelElements.Count == 0)
                 {
+                    // top level should be either the supplied top level, or the
+                    // top level of the level group. 
                     var topLevel = e.TopLevel?.Id == null ? levelGroupForNewEnvelopes.Levels.Last() : levelGroupForNewEnvelopes.FindBestMatch(e.TopLevel.Id, e.TopLevel.Elevation);
+                    // bottom level should be either the supplied bottom level,
+                    // or the first level that's larger than the greatest height
+                    // of already-seen masses (so we stack on top). (or the
+                    // lowest level of the level group, if none found.)
                     var bottomLevel = e.BottomLevel?.Id == null ?
                         levelGroupForNewEnvelopes.Levels.FirstOrDefault(l => l.Elevation > (greatestHeightOfSeenMasses - 0.01)) ?? levelGroupForNewEnvelopes.Levels.First() :
                         levelGroupForNewEnvelopes.FindBestMatch(e.BottomLevel.Id, e.BottomLevel.Elevation);
                     var levelsForEnvelope = levelGroupForNewEnvelopes.GetLevelsBetween(bottomLevel, topLevel);
                     e.SetLevelInfo(levelsForEnvelope, levelGroupForNewEnvelopes);
                 }
+                // if the envelope has no building assigned, that means it
+                // didn't get one from a mass underneath it: assign it a new
+                // building.
                 if (e.Building == null)
                 {
                     var building = new Building
@@ -338,6 +358,7 @@ namespace CreateEnvelopes
                     buildings.Add(building);
                     e.Building = building.Id;
                 }
+                e.PrimaryUseCategory ??= defaultUseCategory;
                 e.Transform = new Transform(0, 0, e.BottomLevel.Elevation);
                 seenMasses.Add(e);
             }

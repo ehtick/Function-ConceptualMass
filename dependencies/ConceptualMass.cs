@@ -296,11 +296,14 @@ namespace Elements
                 var existingScope = scopes.FirstOrDefault((scope) => { return scope.Name == scopeName; });
                 if (existingScope == null)
                 {
-                    var scope = new ViewScope(
-                       bbox,
-                        new Camera(default, CameraNamedPosition.Top, CameraProjection.Orthographic),
-                        true,
-                        name: scopeName);
+                    var scope = new ViewScope()
+                    {
+                        BoundingBox = bbox,
+                        Camera = new Camera(default, CameraNamedPosition.Top, CameraProjection.Orthographic),
+                        LockRotation = true,
+                        ClipWithBoundingBox = true,
+                        Name = scopeName,
+                    };
                     levelVolume.PlanView = scope;
                     scopes.Add(scope);
                 }
