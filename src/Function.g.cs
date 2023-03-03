@@ -13,15 +13,15 @@ using System.Reflection;
 using System.Threading.Tasks;
 
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
-namespace CreateEnvelopes
+namespace ConceptualMassFromModules
 {
     public class Function
     {
         // Cache the model store for use by subsequent
         // executions of this lambda.
-        private IModelStore<CreateEnvelopesInputs> store;
+        private IModelStore<ConceptualMassFromModulesInputs> store;
 
-        public async Task<CreateEnvelopesOutputs> Handler(CreateEnvelopesInputs args, ILambdaContext context)
+        public async Task<ConceptualMassFromModulesOutputs> Handler(ConceptualMassFromModulesInputs args, ILambdaContext context)
         {
             // Preload dependencies (if they exist),
             // so that they are available during model deserialization.
@@ -62,10 +62,10 @@ namespace CreateEnvelopes
 
             if(this.store == null)
             {
-                this.store = new S3ModelStore<CreateEnvelopesInputs>(RegionEndpoint.USWest1);
+                this.store = new S3ModelStore<ConceptualMassFromModulesInputs>(RegionEndpoint.GetBySystemName("us-west-1"));
             }
 
-            var l = new InvocationWrapper<CreateEnvelopesInputs,CreateEnvelopesOutputs>(store, CreateEnvelopes.Execute);
+            var l = new InvocationWrapper<ConceptualMassFromModulesInputs,ConceptualMassFromModulesOutputs>(store, ConceptualMassFromModules.Execute);
             var output = await l.InvokeAsync(args);
             return output;
         }

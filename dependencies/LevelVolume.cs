@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using CreateEnvelopes;
+using ConceptualMassFromModules;
 using Elements.Geometry;
 using Newtonsoft.Json;
 
@@ -11,11 +11,6 @@ namespace Elements
         [JsonProperty("Add Id")]
         public string AddId { get; set; }
         public Guid Envelope { get; set; }
-
-        [JsonProperty("Plan View")]
-
-        public ViewScope PlanView { get; set; }
-
         public List<Line> Skeleton { get; set; }
 
         [JsonProperty("Primary Use Category")]

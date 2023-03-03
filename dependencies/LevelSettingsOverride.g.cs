@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 
-namespace CreateEnvelopes
+namespace ConceptualMassFromModules
 {
 	/// <summary>
 	/// Override metadata for LevelSettingsOverride

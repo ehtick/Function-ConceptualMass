@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 using System;
 using System.Collections.Generic;
 
-namespace CreateEnvelopes.Tests
+namespace ConceptualMassFromModules.Tests
 {
     public class FunctionTests
     {
