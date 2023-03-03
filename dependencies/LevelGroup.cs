@@ -39,7 +39,7 @@ namespace Elements
             var levels = levelElements.Skip(offset).Take(count).ToList();
             if (levels.Count < count)
             {
-                ConceptualMassFromModules.Logging.LogWarning($"A mass was set to have {count} Levels, but there were not enough levels defined in the level group. The last valid level is being repeated.");
+                CreateEnvelopes.Logging.LogWarning($"A mass was set to have {count} Levels, but there were not enough levels defined in the level group. The last valid level is being repeated.");
             }
             while (levels.Count < count)
             {
@@ -54,14 +54,14 @@ namespace Elements
         {
             if (Levels.Count < 2)
             {
-                ConceptualMassFromModules.Logging.LogWarning("There are not enough levels. Add more levels to the level group.");
+                CreateEnvelopes.Logging.LogWarning("There are not enough levels. Add more levels to the level group.");
                 return new List<Level>();
             }
             var bottomLevelIndex = Levels.IndexOf(bottomLevel);
             var topLevelIndex = Levels.IndexOf(topLevel);
             if (topLevel.Elevation <= bottomLevel.Elevation)
             {
-                ConceptualMassFromModules.Logging.LogWarning("The top level is at or below the bottom level. Automatically fixing levels.");
+                CreateEnvelopes.Logging.LogWarning("The top level is at or below the bottom level. Automatically fixing levels.");
                 topLevelIndex = bottomLevelIndex + 1;
                 if (topLevelIndex >= Levels.Count)
                 {

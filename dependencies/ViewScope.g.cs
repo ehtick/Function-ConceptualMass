@@ -27,7 +27,7 @@ namespace Elements
     public partial class ViewScope : Element
     {
         [JsonConstructor]
-        public ViewScope(BBox3 @boundingBox, Camera @camera, bool? @lockRotation, bool? @clipWithBoundingBox, bool? @modal, System.Collections.Generic.IDictionary<string, string> @functionVisibility, System.Guid @id = default, string @name = null)
+        public ViewScope(BBox3 @boundingBox, Camera @camera, bool? @lockRotation, bool? @clipWithBoundingBox, bool? @modal, System.Collections.Generic.IDictionary<string, SystemVisibilityState> @functionVisibility, System.Guid @id = default, string @name = null)
             : base(id, name)
         {
             this.BoundingBox = @boundingBox;
@@ -65,7 +65,7 @@ namespace Elements
         public bool? Modal { get; set; }
     
         [JsonProperty("Function Visibility", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Collections.Generic.IDictionary<string, string> FunctionVisibility { get; set; }
+        public System.Collections.Generic.IDictionary<string, SystemVisibilityState> FunctionVisibility { get; set; }
     
     
     }

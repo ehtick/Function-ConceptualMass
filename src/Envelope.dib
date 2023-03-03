@@ -2,9 +2,9 @@
 
 #r "nuget: Hypar.Elements, *-*"
 #r "nuget: Hypar.Functions, *-*"
-#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/ConceptualMassFromModules.dll"
-#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/ConceptualMassFromModules.Dependencies.dll"
-using ConceptualMassFromModules;
+#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/CreateEnvelopes.dll"
+#r "/Users/andrewheumann/Dev/Envelope/src/bin/Debug/netcoreapp3.1/CreateEnvelopes.Dependencies.dll"
+using CreateEnvelopes;
 using System.IO;
 using Newtonsoft.Json;
 
@@ -33,7 +33,7 @@ public static EnvelopeOutputs Execute(Dictionary<string, Model> inputModels, Env
             return elem.AddId == identity.Value.AddId;
         },
         (elem, edit) => {
-
+            
         },
         defaultEnvelopes);
     return output;
@@ -47,9 +47,9 @@ public EnvelopeInputs GetInput()
     return Newtonsoft.Json.JsonConvert.DeserializeObject<EnvelopeInputs>(json);
 }
 var input = GetInput();
-var modelDependencies = new Dictionary<string, Model> {
-    {"Site", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site/ca5033d8-8bb9-43e5-b070-a2e361982465.json")) },
-    {"Site Constraints", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site Constraints/4a817994-21da-4eba-9469-0ee44d5c4d10.json")) },
+var modelDependencies = new Dictionary<string, Model> { 
+    {"Site", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site/ca5033d8-8bb9-43e5-b070-a2e361982465.json")) }, 
+    {"Site Constraints", Model.FromJson(File.ReadAllText(@"../test/Generated/EnvelopeTest/model_dependencies/Site Constraints/4a817994-21da-4eba-9469-0ee44d5c4d10.json")) }, 
 };
 var output = Execute(modelDependencies, input);
 output.Model.AddElements((modelDependencies["Site"].Elements.Values));
@@ -132,7 +132,7 @@ static void Draw(this Model m, IEnumerable<Profile> c, Color col) {
 
 static void Draw(this Model m, Profile c, Color col) {
         m.AddElements(c.ToModelCurves(material: new Material() {Color = col}));
-
+    
 }
 
 #!csharp
@@ -310,7 +310,7 @@ try {
     var h = H(p, 17.5, m);
     m.Draw(h, Colors.Blue);
 } catch {
-
+    
 }
 return m;
 

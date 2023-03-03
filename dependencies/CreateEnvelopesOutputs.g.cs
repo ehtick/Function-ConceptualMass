@@ -12,17 +12,17 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
 
-namespace ConceptualMassFromModules
+namespace CreateEnvelopes
 {
-    public class ConceptualMassFromModulesOutputs: SystemResults
+    public class CreateEnvelopesOutputs: SystemResults
     {
 
 
         /// <summary>
-        /// Construct a ConceptualMassFromModulesOutputs with default inputs.
+        /// Construct a CreateEnvelopesOutputs with default inputs.
         /// This should be used for testing only.
         /// </summary>
-        public ConceptualMassFromModulesOutputs() : base()
+        public CreateEnvelopesOutputs() : base()
         {
 
         }

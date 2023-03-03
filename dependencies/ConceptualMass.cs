@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Elements.Geometry;
 using Elements.Geometry.Solids;
-using ConceptualMassFromModules;
+using CreateEnvelopes;
 using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
@@ -22,17 +22,17 @@ namespace Elements
         }
 
 
-        // public LevelReference(MassingOverrideAdditionValueTopLevel topLevel)
-        // {
-        //     Id = topLevel?.Id;
-        //     Elevation = topLevel?.Elevation ?? 0.0;
-        // }
+        public LevelReference(MassingOverrideAdditionValueTopLevel topLevel)
+        {
+            Id = topLevel?.Id;
+            Elevation = topLevel?.Elevation ?? 0.0;
+        }
 
-        // public LevelReference(MassingOverrideAdditionValueBottomLevel bottomLevel)
-        // {
-        //     Id = bottomLevel?.Id;
-        //     Elevation = bottomLevel?.Elevation ?? 0.0;
-        // }
+        public LevelReference(MassingOverrideAdditionValueBottomLevel bottomLevel)
+        {
+            Id = bottomLevel?.Id;
+            Elevation = bottomLevel?.Elevation ?? 0.0;
+        }
 
         public LevelReference(Level level)
         {
@@ -40,17 +40,17 @@ namespace Elements
             Elevation = level?.Elevation ?? 0.0;
         }
 
-        // internal void Update(MassingValueTopLevel topLevel)
-        // {
-        //     Id = topLevel?.Id ?? Id;
-        //     Elevation = topLevel?.Elevation ?? Elevation;
-        // }
+        internal void Update(MassingValueTopLevel topLevel)
+        {
+            Id = topLevel?.Id ?? Id;
+            Elevation = topLevel?.Elevation ?? Elevation;
+        }
 
-        // internal void Update(MassingValueBottomLevel bottomLevel)
-        // {
-        //     Id = bottomLevel?.Id ?? Id;
-        //     Elevation = bottomLevel?.Elevation ?? Elevation;
-        // }
+        internal void Update(MassingValueBottomLevel bottomLevel)
+        {
+            Id = bottomLevel?.Id ?? Id;
+            Elevation = bottomLevel?.Elevation ?? Elevation;
+        }
     }
     public partial class ConceptualMass
     {
@@ -89,29 +89,32 @@ namespace Elements
 
         private static Plane XY = new Plane((0, 0), (0, 0, 1));
 
-        // public ConceptualMass(MassingOverrideAddition add, double barWidth)
-        // {
-        //     Profile = add.Value.Boundary?.Project(XY);
-        //     Boundary = Profile;
+        // public List<Guid> LevelIds => 
+
+        // public Guid? Building { get; set; }
+        public ConceptualMass(MassingOverrideAddition add, double barWidth)
+        {
+            Profile = add.Value.Boundary?.Project(XY);
+            Boundary = Profile;
 
 
-        //     AddId = add.Id;
-        //     TopLevel = new LevelReference(add.Value.TopLevel);
-        //     BottomLevel = new LevelReference(add.Value.BottomLevel);
+            AddId = add.Id;
+            TopLevel = new LevelReference(add.Value.TopLevel);
+            BottomLevel = new LevelReference(add.Value.BottomLevel);
 
-        //     if (add.Value.Mode == MassingOverrideAdditionValueMode.Centerline)
-        //     {
-        //         Skeleton = add.Value.Centerline.ToList();
-        //         ApplyMassingStrategy("Custom", barWidth);
-        //     }
-        //     // we only set up the LCS at "add" time, so that it can be used for
-        //     // downstream relative identity. We don't want it to change if the
-        //     // user edits the mass.
-        //     ComputeLCS();
-        //     PrimaryUseCategory = add.Value.PrimaryUseCategory;
-        //     Identity.AddOverrideIdentity(this, add);
-        //     Initialize();
-        // }
+            if (add.Value.Mode == MassingOverrideAdditionValueMode.Centerline)
+            {
+                Skeleton = add.Value.Centerline.ToList();
+                ApplyMassingStrategy("Custom", barWidth);
+            }
+            // we only set up the LCS at "add" time, so that it can be used for
+            // downstream relative identity. We don't want it to change if the
+            // user edits the mass.
+            ComputeLCS();
+            PrimaryUseCategory = add.Value.PrimaryUseCategory;
+            Identity.AddOverrideIdentity(this, add);
+            Initialize();
+        }
 
         private void ComputeLCS()
         {
@@ -129,27 +132,27 @@ namespace Elements
             Initialize();
         }
 
-        // public ConceptualMass Update(MassingOverride edit, double barWidth)
-        // {
-        //     Profile = edit.Value.Boundary?.Project(XY) ?? Profile;
-        //     Boundary = edit.Value.Boundary?.Project(XY) ?? Boundary;
-        //     PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
+        public ConceptualMass Update(MassingOverride edit, double barWidth)
+        {
+            Profile = edit.Value.Boundary?.Project(XY) ?? Profile;
+            Boundary = edit.Value.Boundary?.Project(XY) ?? Boundary;
+            PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
 
-        //     TopLevel.Update(edit.Value.TopLevel);
-        //     BottomLevel.Update(edit.Value.BottomLevel);
+            TopLevel.Update(edit.Value.TopLevel);
+            BottomLevel.Update(edit.Value.BottomLevel);
 
-        //     if (edit.Value.MassingStrategy != null)
-        //     {
-        //         ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
-        //     }
-        //     else if (MassingStrategy == "Custom")
-        //     {
-        //         // Reapply to trim with a newly modified profile.
-        //         ApplyMassingStrategy("Custom", barWidth);
-        //     }
-        //     Identity.AddOverrideIdentity(this, edit);
-        //     return this;
-        // }
+            if (edit.Value.MassingStrategy != null)
+            {
+                ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+            }
+            else if (MassingStrategy == "Custom")
+            {
+                // Reapply to trim with a newly modified profile.
+                ApplyMassingStrategy("Custom", barWidth);
+            }
+            Identity.AddOverrideIdentity(this, edit);
+            return this;
+        }
 
         public void SetLevelInfo(List<Level> levels, LevelGroup levelGroup)
         {
@@ -228,7 +231,7 @@ namespace Elements
             {
                 Material = new Material("Level Lines")
                 {
-                    Color = ConceptualMassFromModules.Constants.EDGE_COLOR,
+                    Color = CreateEnvelopes.Constants.EDGE_COLOR,
                     EdgeDisplaySettings = new EdgeDisplaySettings
                     {
                         WidthMode = EdgeDisplayWidthMode.ScreenUnits,
@@ -241,7 +244,7 @@ namespace Elements
             {
                 Material = new Material("Level Edges")
                 {
-                    Color = ConceptualMassFromModules.Constants.EDGE_COLOR,
+                    Color = CreateEnvelopes.Constants.EDGE_COLOR,
                     EdgeDisplaySettings = new EdgeDisplaySettings
                     {
                         WidthMode = EdgeDisplayWidthMode.ScreenUnits,
@@ -301,7 +304,7 @@ namespace Elements
                         ClipWithBoundingBox = true,
                         Name = scopeName,
                     };
-                    levelVolume.PlanView = scope.Id;
+                    levelVolume.PlanView = scope;
                     scopes.Add(scope);
                 }
                 else

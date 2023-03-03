@@ -1,7 +1,7 @@
 using Elements;
 using Elements.Geometry;
 
-namespace ConceptualMassFromModules
+namespace CreateEnvelopes
 {
     public class Constants
     {

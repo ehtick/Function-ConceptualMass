@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 
-namespace ConceptualMassFromModules
+namespace CreateEnvelopes
 {
 	/// <summary>
 	/// Override metadata for MassingStrategySettingsOverride

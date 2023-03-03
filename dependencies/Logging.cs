@@ -1,9 +1,9 @@
-namespace ConceptualMassFromModules
+namespace CreateEnvelopes
 {
     public static class Logging
     {
-        private static ConceptualMassFromModulesOutputs _outputs = null;
-        public static void SetLogTarget(ConceptualMassFromModulesOutputs output)
+        private static CreateEnvelopesOutputs _outputs = null;
+        public static void SetLogTarget(CreateEnvelopesOutputs output)
         {
             _outputs = output;
         }
