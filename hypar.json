@@ -22,6 +22,10 @@
     {
       "name": "Levels",
       "optional": false
+    },
+    {
+      "name": "Multifamily Prompt",
+      "optional": true
     }
   ],
   "model_output": "Conceptual Mass",
@@ -296,6 +300,15 @@
       "identity": {
         "Add Id": {
           "type": "string"
+        },
+        "Level Name": {
+          "type": "string"
+        },
+        "Level Group Id": {
+          "type": "string"
+        },
+        "Level Group": {
+          "type": "string"
         }
       },
       "schema": {
@@ -324,7 +337,8 @@
     "https://prod-api.hypar.io/schemas/Setback",
     "https://prod-api.hypar.io/schemas/ConceptualMass",
     "https://prod-api.hypar.io/schemas/LevelVolume",
-    "https://prod-api.hypar.io/schemas/ViewScope"
+    "https://prod-api.hypar.io/schemas/ViewScope",
+    "https://prod-api.hypar.io/schemas/AreaTally"
   ],
   "filters": {
     "Levels Only": {

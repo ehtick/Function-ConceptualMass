@@ -140,15 +140,23 @@ namespace Elements
 
             TopLevel.Update(edit.Value.TopLevel);
             BottomLevel.Update(edit.Value.BottomLevel);
-
-            if (edit.Value.MassingStrategy != null)
+            try
             {
-                ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+                if (edit.Value.MassingStrategy != null)
+                {
+                    ApplyMassingStrategy(Hypar.Model.Utilities.GetStringValueFromEnum(edit.Value.MassingStrategy), barWidth);
+                }
+                else if (MassingStrategy == "Custom")
+                {
+                    // Reapply to trim with a newly modified profile.
+                    ApplyMassingStrategy("Custom", barWidth);
+                }
             }
-            else if (MassingStrategy == "Custom")
+            catch
             {
-                // Reapply to trim with a newly modified profile.
-                ApplyMassingStrategy("Custom", barWidth);
+                // Swallow. I'm not sure why boundary is coming out null
+                // sometimes, so I'm not sure what a graceful recovery looks
+                // like. Possibly this is due to a user hitting "reset" and then saving in the UI?
             }
             Identity.AddOverrideIdentity(this, edit);
             return this;
@@ -258,6 +266,7 @@ namespace Elements
         public List<LevelVolume> GetLevelVolumes(List<ViewScope> scopes)
         {
             var list = new List<LevelVolume>();
+            int i = 0;
             foreach (var lvl in LevelElements.SkipLast(1))
             {
                 if (lvl.Height == null)
@@ -266,7 +275,11 @@ namespace Elements
                 }
                 var profileInset = this.Profile.Offset(-0.05).First();
                 var representation = new Extrude(profileInset, lvl.Height.Value - 0.05, Vector3.ZAxis, false);
-
+                var primaryUseCategory = PrimaryUseCategory;
+                if (Settings?.LevelUseCategories?.TryGetValue(i, out var levelUseCategory) == true)
+                {
+                    primaryUseCategory = levelUseCategory;
+                }
                 var levelVolume = new LevelVolume
                 {
                     Profile = this.Profile,
@@ -277,12 +290,15 @@ namespace Elements
                     Transform = new Transform(0, 0, lvl.Elevation),
                     BuildingName = this.Name,
                     Skeleton = this.Skeleton?.ToList(),
-                    PrimaryUseCategory = this.PrimaryUseCategory,
+                    PrimaryUseCategory = primaryUseCategory,
                     Material = Constants.LEVEL_MATERIAL,
                     Level = lvl.Id,
                     Mass = this.Id,
                     Envelope = this.Id,
-                    AddId = $"{this.AddId}-{lvl.Id}"
+                    AddId = $"{this.AddId}-{lvl.Id}",
+                    LevelName = lvl.Name,
+                    LevelGroupId = lvl.LevelGroupId,
+                    LevelGroup = lvl.LevelGroup,
                 };
                 var scopeName = levelVolume.Name;
                 if (!String.IsNullOrEmpty(levelVolume.BuildingName))
@@ -292,7 +308,7 @@ namespace Elements
                 var bbox = new BBox3(levelVolume);
                 // drop the box by a meter to avoid ceilings / beams, etc.
                 // drop the bottom to encompass floors below
-                bbox = new BBox3(bbox.Min + (0, 0, -0.3), bbox.Max + (0, 0, -1));
+                bbox = new BBox3(bbox.Min + (0, 0, -0.1), bbox.Max + (0, 0, -1));
                 var existingScope = scopes.FirstOrDefault((scope) => { return scope.Name == scopeName; });
                 if (existingScope == null)
                 {
@@ -303,8 +319,11 @@ namespace Elements
                         LockRotation = true,
                         ClipWithBoundingBox = true,
                         Name = scopeName,
+                        FunctionVisibility = new Dictionary<string, string> {
+                            {"Unit Definitions", "hidden"}
+                        },
                     };
-                    levelVolume.PlanView = scope;
+                    levelVolume.PlanView = scope.Id;
                     scopes.Add(scope);
                 }
                 else
@@ -312,6 +331,7 @@ namespace Elements
                     existingScope.BoundingBox = new BBox3(new[] { bbox.Min, bbox.Max, existingScope.BoundingBox.Max, existingScope.BoundingBox.Min });
                 }
                 list.Add(levelVolume);
+                i++;
             }
             return list;
         }
@@ -330,13 +350,13 @@ namespace Elements
         {
             get
             {
-                if (_extrude == null)
-                {
-                    _extrude = new Extrude(Profile, Height, Vector3.ZAxis, false);
-                }
+                _extrude ??= new Extrude(Profile, Height, Vector3.ZAxis, false);
                 return _extrude;
             }
         }
+
+        public ConceptualMassSettings Settings { get; set; }
+
         public override void UpdateRepresentations()
         {
             this.Representation = Extrude;

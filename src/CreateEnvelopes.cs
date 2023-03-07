@@ -17,16 +17,20 @@ namespace CreateEnvelopes
         /// <returns>A CreateEnvelopesOutputs instance containing computed results and the model with any new elements.</returns>
         public static CreateEnvelopesOutputs Execute(Dictionary<string, Model> inputModels, CreateEnvelopesInputs input)
         {
+            ThemeColors.Initialize();
             var output = new CreateEnvelopesOutputs();
             Logging.SetLogTarget(output);
             var hasSite = inputModels.TryGetValue("Site", out var siteModel);
             var hasSiteConstraints = inputModels.TryGetValue("Site Constraints", out var siteConstraintsModel);
             var hasUnitDefinitions = inputModels.TryGetValue("Unit Definitions", out var residentialUnitsModel);
             var levelsModel = inputModels["Levels"];
+
+            inputModels.TryGetValue("Multifamily Prompt", out var promptModel);
+
             // Get the width of any bar masses, based on site constraints. 
             var barWidth = ComputeBarWidth(hasSiteConstraints, siteConstraintsModel, hasUnitDefinitions, residentialUnitsModel);
             // generate default masses based on sites + site constraints
-            var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, levelsModel, input, barWidth);
+            var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, levelsModel, input, barWidth, promptModel);
             // process add / edit overrides for Masses
             var addIds = new List<string>();
             var overriddenMasses = input.Overrides.Massing.CreateElements(
@@ -66,11 +70,39 @@ namespace CreateEnvelopes
             var levelVolumes = masses.SelectMany(e => e.GetLevelVolumes(scopes)).ToList();
             levelVolumes = input.Overrides.LevelSettings.Apply(
                 levelVolumes,
-                (elem, identity) => elem.AddId == identity.AddId,
+                (elem, identity) => elem.Match(identity),
                 (elem, edit) => elem.Update(edit));
             output.Model.AddElements(levelVolumes);
+            var areaTallies = ComputeLevelAreas(levelVolumes);
+            output.Model.AddElements(areaTallies);
             output.Model.AddElements(scopes);
             return output;
+        }
+
+        private static List<AreaTally> ComputeLevelAreas(List<LevelVolume> levelVolumes)
+        {
+            var areaTallies = new Dictionary<string, AreaTally>();
+            foreach (var lv in levelVolumes)
+            {
+                var primaryUse = lv.PrimaryUseCategory;
+                if (!areaTallies.ContainsKey(primaryUse))
+                {
+                    var color = ProgramUseColors.GetColor(primaryUse);
+                    areaTallies.Add(primaryUse, new AreaTally
+                    {
+                        Name = primaryUse,
+                        AchievedArea = lv.Area,
+                        ProgramColor = color,
+                        AchievedCount = 1
+                    });
+                }
+                else
+                {
+                    areaTallies[primaryUse].AchievedArea += lv.Area;
+                    areaTallies[primaryUse].AchievedCount += 1;
+                }
+            }
+            return areaTallies.Values.ToList();
         }
 
         private static double ComputeBarWidth(bool hasSiteConstraints, Model siteConstraintsModel, bool hasUnitDefinitions, Model residentialUnitsModel)
@@ -116,7 +148,7 @@ namespace CreateEnvelopes
             return new Site(rect, rect.Area());
         }
 
-        public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, Model levelsModel, CreateEnvelopesInputs input, double barWidth)
+        public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, Model levelsModel, CreateEnvelopesInputs input, double barWidth, Model promptModel)
         {
             var removedAddIds = new HashSet<string>(input.Overrides.Removals.Massing.Select((r) => r.Identity.AddId));
             var overridesByAddId = input.Overrides.Massing.ToDictionary((o) => o.Identity.AddId);
@@ -126,6 +158,10 @@ namespace CreateEnvelopes
             var allSetbacks = siteConstraintsModel?.AllElementsOfType<Setback>() ?? new List<Setback>();
             var allSiteConstraints = siteConstraintsModel?.AllElementsOfType<SiteConstraintInfo>() ?? new List<SiteConstraintInfo>();
             var allLevelGroups = levelsModel.AllElementsOfType<LevelGroup>();
+
+            // Injected settings from an optional AI prompt dependency. 
+            var conceptualMassSettings = promptModel?.AllElementsOfType<ConceptualMassSettingsElement>().Select(s => s.Settings).OrderBy(s => s.BottomLevelIndex ?? 0).ToList() ?? new List<ConceptualMassSettings>();
+
             foreach (var site in sites)
             {
                 var setbacksForSite = allSetbacks.Where(s => s.Site == site.Id).ToList();
@@ -140,6 +176,20 @@ namespace CreateEnvelopes
                     elevationChanges.Add(setback.StartingHeight);
                 }
                 var maxHeight = levelGroupForSite.MaxHeight ?? constraintForSite?.MaxHeight ?? Constants.DEFAULT_MAX_HEIGHT;
+                foreach (var settings in conceptualMassSettings)
+                {
+                    if (settings.BottomLevelIndex.HasValue)
+                    {
+                        var bottomLevel = levelGroupForSite.Levels[settings.BottomLevelIndex.Value];
+                        elevationChanges.Add(bottomLevel.Elevation);
+                    }
+                    if (settings.TopLevelIndex.HasValue)
+                    {
+                        var topLevel = levelGroupForSite.Levels[settings.TopLevelIndex.Value];
+                        elevationChanges.Add(topLevel.Elevation);
+                        maxHeight = topLevel.Elevation;
+                    }
+                }
                 elevationChanges.Add(maxHeight);
                 var elevationChangesSorted = elevationChanges.OrderBy(e => e).ToList();
                 // If we create a volume that's less than the intended height
@@ -150,6 +200,8 @@ namespace CreateEnvelopes
                 for (int i = 0; i < elevationChangesSorted.Count - 1; i++)
                 {
                     var addId = $"{site.AddId ?? $"{site.GenerateNewAddId()}"}-{i}";
+
+                    var settingsForLevel = conceptualMassSettings.ElementAtOrDefault(i);
 
                     var curr = elevationChangesSorted[i];
                     var next = elevationChangesSorted[i + 1];
@@ -163,8 +215,8 @@ namespace CreateEnvelopes
                     Profile baseProfile = null;
 
                     List<Level> levels = levelGroupForSite.GetLevelsUpToHeight(next, lastLevelUsed);
-                    var strategy = "Full";
-                    string primaryUseCategory = null;
+                    var strategy = settingsForLevel?.GetMassingStrategy() ?? "Full";
+                    string primaryUseCategory = settingsForLevel?.PrimaryUseCategory ?? null;
                     // Override Edits
                     if (overridesByAddId.TryGetValue(addId, out var overrideVal))
                     {
@@ -191,6 +243,7 @@ namespace CreateEnvelopes
                     {
                         AddId = addId,
                         PrimaryUseCategory = primaryUseCategory,
+                        Settings = settingsForLevel,
                     };
                     if (overrideVal != null)
                     {
@@ -357,6 +410,10 @@ namespace CreateEnvelopes
                     building.MassAddIds.Add(e.AddId);
                     buildings.Add(building);
                     e.Building = building.Id;
+                }
+                if (e.PrimaryUseCategory == null && e.Skeleton == null && defaultUseCategory == "Residential" && e.MassingStrategy == "Full")
+                {
+                    e.ApplyMassingStrategy("L", e.BarWidth);
                 }
                 e.PrimaryUseCategory ??= defaultUseCategory;
                 e.Transform = new Transform(0, 0, e.BottomLevel.Elevation);
