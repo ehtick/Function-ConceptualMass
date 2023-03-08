@@ -87,14 +87,12 @@ namespace Elements
         [JsonIgnore]
         private Guid LevelGroupId { get; set; }
 
-        private static Plane XY = new Plane((0, 0), (0, 0, 1));
-
-        // public List<Guid> LevelIds => 
+        // public List<Guid> LevelIds =>
 
         // public Guid? Building { get; set; }
         public ConceptualMass(MassingOverrideAddition add, double barWidth)
         {
-            Profile = add.Value.Boundary?.Project(XY);
+            Profile = add.Value.Boundary?.Project(Plane.XY);
             Boundary = Profile;
 
 
@@ -125,8 +123,8 @@ namespace Elements
 
         public ConceptualMass(Profile boundary, List<Level> levels, LevelGroup levelGroup)
         {
-            Profile = boundary?.Project(XY);
-            Boundary = boundary?.Project(XY);
+            Profile = boundary?.Project(Plane.XY);
+            Boundary = boundary?.Project(Plane.XY);
             ComputeLCS();
             SetLevelInfo(levels, levelGroup);
             Initialize();
@@ -134,8 +132,8 @@ namespace Elements
 
         public ConceptualMass Update(MassingOverride edit, double barWidth)
         {
-            Profile = edit.Value.Boundary?.Project(XY) ?? Profile;
-            Boundary = edit.Value.Boundary?.Project(XY) ?? Boundary;
+            Profile = edit.Value.Boundary?.Project(Plane.XY) ?? Profile;
+            Boundary = edit.Value.Boundary?.Project(Plane.XY) ?? Boundary;
             PrimaryUseCategory = edit.Value.PrimaryUseCategory ?? PrimaryUseCategory;
 
             TopLevel.Update(edit.Value.TopLevel);
@@ -231,7 +229,7 @@ namespace Elements
                 var b = e.Value.Right.Vertex.Point;
                 if (a.DistanceTo(b) < 0.1)
                 {
-                    return new Line[] { };
+                    return Array.Empty<Line>();
                 }
                 return new[] { new Line(e.Value.Left.Vertex.Point, e.Value.Right.Vertex.Point).TransformedLine(Transform) };
             });
@@ -585,10 +583,7 @@ namespace Elements
             {
                 return currentPolylines;
             }
-            if (currentPolylines == null)
-            {
-                currentPolylines = new List<Polyline>();
-            }
+            currentPolylines ??= new List<Polyline>();
             foreach (var pl in skeleton)
             {
                 if (currentPolylines.Count == 0)
