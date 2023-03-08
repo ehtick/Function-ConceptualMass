@@ -24,10 +24,16 @@ namespace CreateEnvelopes
             var hasSiteConstraints = inputModels.TryGetValue("Site Constraints", out var siteConstraintsModel);
             var hasUnitDefinitions = inputModels.TryGetValue("Unit Definitions", out var residentialUnitsModel);
             var levelsModel = inputModels["Levels"];
+            // Older levels functions might not create level groups. If there are no level groups, create one and add it in to the model.
+            if (!levelsModel.AllElementsOfType<LevelGroup>().Any())
+            {
+                levelsModel.AddElement(CreateDefaultLevelGroup(levelsModel));
+            }
+
 
             inputModels.TryGetValue("Multifamily Prompt", out var promptModel);
 
-            // Get the width of any bar masses, based on site constraints. 
+            // Get the width of any bar masses, based on site constraints.
             var barWidth = ComputeBarWidth(hasSiteConstraints, siteConstraintsModel, hasUnitDefinitions, residentialUnitsModel);
             // generate default masses based on sites + site constraints
             var masses = CreateDefaultMasses(siteModel, siteConstraintsModel, levelsModel, input, barWidth, promptModel);
@@ -64,7 +70,8 @@ namespace CreateEnvelopes
                 (bldg, edit) => bldg.Update(edit, masses));
             output.Model.AddElements(masses);
             output.Model.AddElements(overriddenBuildings);
-            output.Model.AddElements(masses.SelectMany(e => e.GetDimensions()));
+            // dimensions are slow in the UI. Let's stop drawing them for now.
+            // output.Model.AddElements(masses.SelectMany(e => e.GetDimensions()));
             output.Model.AddElements(masses.SelectMany(e => e.GetLevelDisplay()));
             var scopes = new List<ViewScope>();
             var levelVolumes = masses.SelectMany(e => e.GetLevelVolumes(scopes)).ToList();
@@ -85,6 +92,10 @@ namespace CreateEnvelopes
             foreach (var lv in levelVolumes)
             {
                 var primaryUse = lv.PrimaryUseCategory;
+                if (primaryUse == null)
+                {
+                    continue;
+                }
                 if (!areaTallies.ContainsKey(primaryUse))
                 {
                     var color = ProgramUseColors.GetColor(primaryUse);
@@ -115,13 +126,13 @@ namespace CreateEnvelopes
                 {
                     var setbacks = siteConstraintsModel.AllElementsOfType<Setback>();
                     var setbacksWithBalconyRule = setbacks.Where(s => s.BalconyProtrusionDepth != null);
-                    if (setbacksWithBalconyRule.Count() > 0)
+                    if (setbacksWithBalconyRule.Any())
                     {
                         balconyOffset = setbacksWithBalconyRule.Max(s => s.BalconyProtrusionDepth.Value);
                     }
                 }
                 var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
-                // choose the largest depth. Include balconies if balconyOffset != null. 
+                // choose the largest depth. Include balconies if balconyOffset != null.
                 var greatestDepth = unitDefs.Max(u =>
                 {
                     if (balconyOffset != null)
@@ -159,14 +170,14 @@ namespace CreateEnvelopes
             var allSiteConstraints = siteConstraintsModel?.AllElementsOfType<SiteConstraintInfo>() ?? new List<SiteConstraintInfo>();
             var allLevelGroups = levelsModel.AllElementsOfType<LevelGroup>();
 
-            // Injected settings from an optional AI prompt dependency. 
+            // Injected settings from an optional AI prompt dependency.
             var conceptualMassSettings = promptModel?.AllElementsOfType<ConceptualMassSettingsElement>().Select(s => s.Settings).OrderBy(s => s.BottomLevelIndex ?? 0).ToList() ?? new List<ConceptualMassSettings>();
 
             foreach (var site in sites)
             {
                 var setbacksForSite = allSetbacks.Where(s => s.Site == site.Id).ToList();
                 var constraintForSite = allSiteConstraints.FirstOrDefault(s => s.Site == site.Id);
-                var levelGroupForSite = allLevelGroups.FirstOrDefault(l => l.Site == site.Id) ?? allLevelGroups.First();
+                var levelGroupForSite = allLevelGroups.FirstOrDefault(l => l.Site == site.Id) ?? allLevelGroups.FirstOrDefault();
                 var elevationChanges = new HashSet<double>
                 {
                     0.0
@@ -256,6 +267,26 @@ namespace CreateEnvelopes
             }
 
             return list;
+        }
+
+        private static LevelGroup CreateDefaultLevelGroup(Model levelsModel)
+        {
+            var levels = levelsModel.AllElementsOfType<Level>().OrderBy(l => l.Elevation).ToList();
+            Logging.LogWarning("No Level Group found. Creating a default Level Group.");
+            var levelGroup = new LevelGroup
+            {
+                Levels = new List<Level>(levels),
+                Name = "Default Level Group",
+                LevelGroupId = "Default Level Group",
+            };
+            for (int i = 0; i < levels.Count - 1; i++)
+            {
+                var currLevel = levels[i];
+                var nextLevel = levels[i + 1];
+                var floorToFloor = nextLevel.Elevation - currLevel.Elevation;
+                currLevel.Height = floorToFloor;
+            }
+            return levelGroup;
         }
 
         private static Profile CreateProfileFromSetbacks(Polygon perimeter, List<Setback> setbacksAtHeight)
@@ -357,7 +388,7 @@ namespace CreateEnvelopes
                     // If the current mass intersects the seen mass, stack on top of it, and propagate settings upwards.
                     if (se.Profile.Perimeter.Intersects(e.Profile.Perimeter))
                     {
-                        // keep track of the greatest height we've seen. 
+                        // keep track of the greatest height we've seen.
                         var heightOfMass = se.Elevation + se.Height;
                         if (heightOfMass > greatestHeightOfSeenMasses)
                         {
@@ -386,7 +417,7 @@ namespace CreateEnvelopes
                 if (e.LevelElements.Count == 0)
                 {
                     // top level should be either the supplied top level, or the
-                    // top level of the level group. 
+                    // top level of the level group.
                     var topLevel = e.TopLevel?.Id == null ? levelGroupForNewEnvelopes.Levels.Last() : levelGroupForNewEnvelopes.FindBestMatch(e.TopLevel.Id, e.TopLevel.Elevation);
                     // bottom level should be either the supplied bottom level,
                     // or the first level that's larger than the greatest height
