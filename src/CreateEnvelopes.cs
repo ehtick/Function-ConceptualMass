@@ -191,12 +191,12 @@ namespace CreateEnvelopes
                 {
                     if (settings.BottomLevelIndex.HasValue)
                     {
-                        var bottomLevel = levelGroupForSite.Levels[settings.BottomLevelIndex.Value];
+                        var bottomLevel = levelGroupForSite.Levels.ElementAtOrDefault(settings.BottomLevelIndex.Value) ?? levelGroupForSite.Levels.First();
                         elevationChanges.Add(bottomLevel.Elevation);
                     }
                     if (settings.TopLevelIndex.HasValue)
                     {
-                        var topLevel = levelGroupForSite.Levels[settings.TopLevelIndex.Value];
+                        var topLevel = levelGroupForSite.Levels.ElementAtOrDefault(settings.TopLevelIndex.Value) ?? levelGroupForSite.Levels.Last();
                         elevationChanges.Add(topLevel.Elevation);
                         maxHeight = topLevel.Elevation;
                     }
