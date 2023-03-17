@@ -258,6 +258,7 @@ namespace Elements
                     }
                 }
             };
+            ml2.SetSelectable(false);
             return new List<ModelLines> { ml1, ml2 };
         }
 
