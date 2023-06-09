@@ -319,8 +319,54 @@ namespace Elements
                         ClipWithBoundingBox = true,
                         Name = scopeName,
                         FunctionVisibility = new Dictionary<string, string> {
-                            {"Unit Definitions", "hidden"}
+                            {"Unit Definitions", "hidden"},
+                            {"Space Planning Zones", "visible"},
+                            {"Conceptual Mass", "hidden"}
                         },
+                        Actions = new List<object> {
+                            // new FunctionOverrideAction {
+                            //     Id = $"{scopeName}-level-settings-override",
+                            //     Type = "function-override",
+                            //     Function = new FunctionIdentifier {
+                            //         ModelOutput = "Conceptual Mass"
+                            //     },
+                            //     OverridePaths = new List<string> {
+                            //         "Level Settings"
+                            //     },
+                            // },
+                            // new FunctionOverrideAction {
+                            //     Id = $"{scopeName}-unit-layout-override",
+                            //     Type = "function-override",
+                            //     Function = new FunctionIdentifier {
+                            //         ModelOutput = "Unit Layout"
+                            //     },
+                            //     OverridePaths = new List<string> {
+                            //         "Level Variant",
+                            //         "Unit Layout"
+                            //     },
+                            // },
+                            new FunctionOverrideAction {
+                                Id = $"{scopeName}-spaces-override",
+                                Type = "function-override",
+                                Function = new FunctionIdentifier {
+                                    ModelOutput = "Space Planning Zones"
+                                },
+                                OverridePaths = new List<string> {
+                                    "Spaces"
+                                },
+                            },
+                            new FunctionOverrideAction {
+                                Id = $"{scopeName}-circulation-override",
+                                Type = "function-override",
+                                Function = new FunctionIdentifier {
+                                    ModelOutput = "Circulation"
+                                },
+                                OverridePaths = new List<string> {
+                                    "Circulation",
+                                    "Corridors"
+                                },
+                            }
+                        }
                     };
                     levelVolume.PlanView = scope.Id;
                     scopes.Add(scope);

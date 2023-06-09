@@ -338,7 +338,9 @@
     "https://prod-api.hypar.io/schemas/ConceptualMass",
     "https://prod-api.hypar.io/schemas/LevelVolume",
     "https://prod-api.hypar.io/schemas/ViewScope",
-    "https://prod-api.hypar.io/schemas/AreaTally"
+    "https://prod-api.hypar.io/schemas/AreaTally",
+    "https://schemas.hypar.io/FunctionInputAction.json",
+    "https://schemas.hypar.io/FunctionOverrideAction.json"
   ],
   "filters": {
     "Levels Only": {
