@@ -84,7 +84,7 @@ namespace CreateEnvelopes
             output.Model.AddElements(areaTallies);
             output.Model.AddElements(scopes);
 
-            output.TotalArea = areaTallies.Sum(at => Math.Abs(at.AchievedArea));
+            output.TotalArea = areaTallies.Sum(at => at.AchievedArea);
 
             return output;
         }
@@ -105,14 +105,14 @@ namespace CreateEnvelopes
                     areaTallies.Add(primaryUse, new AreaTally
                     {
                         Name = primaryUse,
-                        AchievedArea = lv.Area,
+                        AchievedArea = Math.Abs(lv.Area),
                         ProgramColor = color,
                         AchievedCount = 1
                     });
                 }
                 else
                 {
-                    areaTallies[primaryUse].AchievedArea += lv.Area;
+                    areaTallies[primaryUse].AchievedArea += Math.Abs(lv.Area);
                     areaTallies[primaryUse].AchievedCount += 1;
                 }
             }
@@ -159,7 +159,7 @@ namespace CreateEnvelopes
         public static Site CreateDefaultSite()
         {
             var rect = Polygon.Rectangle(100, 100);
-            return new Site(rect, rect.Area());
+            return new Site(rect, Math.Abs(rect.Area()));
         }
 
         public static List<ConceptualMass> CreateDefaultMasses(Model siteModel, Model siteConstraintsModel, Model levelsModel, CreateEnvelopesInputs input, double barWidth, Model promptModel)
@@ -352,7 +352,7 @@ namespace CreateEnvelopes
                 try
                 {
                     var difference = Profile.Difference(new[] { profile }, new[] { new Profile(rectangleFromSetback) });
-                    profile = difference.OrderBy(p => p.Area()).LastOrDefault() ?? profile;
+                    profile = difference.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
                 }
                 catch
                 {
