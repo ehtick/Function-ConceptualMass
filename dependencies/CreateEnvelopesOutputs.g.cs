@@ -16,6 +16,12 @@ namespace CreateEnvelopes
 {
     public class CreateEnvelopesOutputs: SystemResults
     {
+		/// <summary>
+		/// The total area of the Conceptual Masses
+		/// </summary>
+		[JsonProperty("Total Area")]
+		public double TotalArea {get; set;}
+
 
 
         /// <summary>
@@ -28,5 +34,21 @@ namespace CreateEnvelopes
         }
 
 
+        /// <summary>
+        /// Construct a CreateEnvelopesOutputs specifying all inputs.
+        /// </summary>
+        /// <returns></returns>
+        [JsonConstructor]
+        public CreateEnvelopesOutputs(double totalArea): base()
+        {
+			this.TotalArea = totalArea;
+
+		}
+
+		public override string ToString()
+		{
+			var json = JsonConvert.SerializeObject(this);
+			return json;
+		}
 	}
 }

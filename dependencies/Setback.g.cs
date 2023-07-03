@@ -66,7 +66,7 @@ namespace Elements
     
         /// <summary>If set, balconies are permitted to penetrate into this setback by this distance.</summary>
         [JsonProperty("Balcony Protrusion Depth", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public double? BalconyProtrusionDepth { get; set; }
+        public double? BalconyProtrusionDepth { get; set; } = 0D;
     
     
     }

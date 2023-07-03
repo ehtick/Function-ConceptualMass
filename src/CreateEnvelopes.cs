@@ -83,6 +83,9 @@ namespace CreateEnvelopes
             var areaTallies = ComputeLevelAreas(levelVolumes);
             output.Model.AddElements(areaTallies);
             output.Model.AddElements(scopes);
+
+            output.TotalArea = areaTallies.Sum(at => Math.Abs(at.AchievedArea));
+
             return output;
         }
 

@@ -331,6 +331,14 @@
       }
     }
   },
+  "outputs": [
+    {
+      "unit_type": "area",
+      "name": "Total Area",
+      "description": "The total area of the Conceptual Masses",
+      "type": "number"
+    }
+  ],
   "element_types": [
     "https://prod-api.hypar.io/schemas/Site",
     "https://prod-api.hypar.io/schemas/Level",
