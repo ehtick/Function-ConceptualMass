@@ -356,6 +356,8 @@ namespace CreateEnvelopes
                 {
                     var extented = rs.Baseline.ExtendTo(profile);
                     var splits = Profile.Split(new[] { profile }, new Polyline(extented.Start, extented.End));
+                    // This area strategy will choose the wrong polygon in some circumstances. 
+                    // TODO: analyze which side of the setback the results are on, and only include results "inside" of the setback line.
                     profile = splits.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
                 }
                 else
@@ -366,6 +368,8 @@ namespace CreateEnvelopes
                     try
                     {
                         var difference = Profile.Difference(new[] { profile }, new[] { new Profile(rectangleFromSetback) });
+                        // This area strategy will choose the wrong polygon in some circumstances. 
+                        // TODO: analyze which side of the setback the results are on, and only include results "inside" of the setback line.
                         profile = difference.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
                     }
                     catch
