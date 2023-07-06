@@ -61,18 +61,11 @@ namespace CreateEnvelopes
             Console.WriteLine($"Time to load assemblies: {sw.Elapsed.TotalSeconds})");
 
             if(this.store == null)
-            { 
-                if (args.SignedResourceUrls == null)
-                {
-                    this.store = new S3ModelStore<CreateEnvelopesInputs>(RegionEndpoint.GetBySystemName("us-west-1"));
-                }
-                else
-                {
-                    this.store = new UrlModelStore<CreateEnvelopesInputs>();
-                }
+            {
+                this.store = new S3ModelStore<CreateEnvelopesInputs>(RegionEndpoint.GetBySystemName("us-west-1"));
             }
 
-            var l = new InvocationWrapper<CreateEnvelopesInputs,CreateEnvelopesOutputs> (store, CreateEnvelopes.Execute);
+            var l = new InvocationWrapper<CreateEnvelopesInputs,CreateEnvelopesOutputs>(store, CreateEnvelopes.Execute);
             var output = await l.InvokeAsync(args);
             return output;
         }
