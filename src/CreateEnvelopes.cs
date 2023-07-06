@@ -124,6 +124,12 @@ namespace CreateEnvelopes
             var barWidth = Constants.DEFAULT_BAR_WIDTH;
             if (hasUnitDefinitions)
             {
+                var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
+                if (!unitDefs.Any())
+                {
+                    return barWidth;
+                }
+
                 double? balconyOffset = null;
                 if (hasSiteConstraints)
                 {
@@ -134,7 +140,7 @@ namespace CreateEnvelopes
                         balconyOffset = setbacksWithBalconyRule.Max(s => s.BalconyProtrusionDepth.Value);
                     }
                 }
-                var unitDefs = residentialUnitsModel.AllElementsOfType<UnitDefinition>();
+
                 // choose the largest depth. Include balconies if balconyOffset != null.
                 var greatestDepth = unitDefs.Max(u =>
                 {
