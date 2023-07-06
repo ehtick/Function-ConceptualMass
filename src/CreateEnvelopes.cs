@@ -352,17 +352,26 @@ namespace CreateEnvelopes
             // perimeter, we have to revert to a boolean strategy.
             foreach (var rs in remainingSetbacks)
             {
-                var a = rs.Baseline.Offset(rs.Distance, false);
-                var b = rs.Baseline.Offset(rs.Distance, true);
-                var rectangleFromSetback = new Polygon(a.Start, a.End, b.End, b.Start);
-                try
+                if (rs.Distance.ApproximatelyEquals(0))
                 {
-                    var difference = Profile.Difference(new[] { profile }, new[] { new Profile(rectangleFromSetback) });
-                    profile = difference.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
+                    var extented = rs.Baseline.ExtendTo(profile);
+                    var splits = Profile.Split(new[] { profile }, new Polyline(extented.Start, extented.End));
+                    profile = splits.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
                 }
-                catch
+                else
                 {
-                    Console.WriteLine("Setback boolean failed.");
+                    var a = rs.Baseline.Offset(rs.Distance, false);
+                    var b = rs.Baseline.Offset(rs.Distance, true);
+                    var rectangleFromSetback = new Polygon(a.Start, a.End, b.End, b.Start);
+                    try
+                    {
+                        var difference = Profile.Difference(new[] { profile }, new[] { new Profile(rectangleFromSetback) });
+                        profile = difference.OrderBy(p => Math.Abs(p.Area())).LastOrDefault() ?? profile;
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Setback boolean failed.");
+                    }
                 }
             }
 
