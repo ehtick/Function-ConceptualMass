@@ -187,6 +187,11 @@ namespace CreateEnvelopes
                 var setbacksForSite = allSetbacks.Where(s => s.Site == site.Id).ToList();
                 var constraintForSite = allSiteConstraints.FirstOrDefault(s => s.Site == site.Id);
                 var levelGroupForSite = allLevelGroups.FirstOrDefault(l => l.Site == site.Id) ?? allLevelGroups.FirstOrDefault();
+                if(levelGroupForSite == null || levelGroupForSite.Levels.Count() == 0)
+                {
+                    Logging.LogWarning("No Levels found in the model.");
+                    continue;
+                }
                 var elevationChanges = new HashSet<double>
                 {
                     0.0
