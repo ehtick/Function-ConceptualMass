@@ -318,6 +318,7 @@ namespace Elements
                         LockRotation = true,
                         ClipWithBoundingBox = true,
                         Name = scopeName,
+                        ClippingBehavior = ViewScopeClippingBehavior.TopAndBottom,
                         FunctionVisibility = new Dictionary<string, string> {
                             {"Unit Definitions", "hidden"},
                             {"Space Planning Zones", "visible"},
