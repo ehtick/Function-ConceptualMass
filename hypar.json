@@ -46,7 +46,7 @@
                   }
                 ]
               },
-              "$ref": "https://prod-api.hypar.io/schemas/Profile",
+              "$ref": "https://schemas.hypar.io/Profile.json",
               "description": "The extents of the envelope. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option."
             },
             "Centerline": {
@@ -61,7 +61,7 @@
                 ]
               },
               "items": {
-                "$ref": "https://hypar.io/Schemas/Geometry/Line.json"
+                "$ref": "https://schemas.hypar.io/Line.json"
               }
             },
             "Top Level": {
@@ -172,7 +172,7 @@
         "Boundary": {
           "$hyparOrder": 1,
           "$hyparRelativeToTransform": true,
-          "$ref": "https://prod-api.hypar.io/schemas/Profile",
+          "$ref": "https://schemas.hypar.io/Profile.json",
           "description": "The extents of the mass. If using a massing strategy other than \"Full\", this denotes the boundary which constrains the massing option."
         },
         "Top Level": {
@@ -268,7 +268,7 @@
           "type": "array",
           "$hyparOrder": 0,
           "items": {
-            "$ref": "https://hypar.io/Schemas/Geometry/Line.json"
+            "$ref": "https://schemas.hypar.io/Line.json"
           }
         }
       },
@@ -340,13 +340,13 @@
     }
   ],
   "element_types": [
-    "https://prod-api.hypar.io/schemas/Site",
-    "https://prod-api.hypar.io/schemas/Level",
-    "https://prod-api.hypar.io/schemas/Setback",
-    "https://prod-api.hypar.io/schemas/ConceptualMass",
-    "https://prod-api.hypar.io/schemas/LevelVolume",
-    "https://prod-api.hypar.io/schemas/ViewScope",
-    "https://prod-api.hypar.io/schemas/AreaTally",
+    "https://schemas.hypar.io/Site.json",
+    "https://schemas.hypar.io/Level.json",
+    "https://schemas.hypar.io/Setback.json",
+    "https://schemas.hypar.io/ConceptualMass.json",
+    "https://schemas.hypar.io/LevelVolume.json",
+    "https://schemas.hypar.io/ViewScope.json",
+    "https://schemas.hypar.io/AreaTally.json",
     "https://schemas.hypar.io/FunctionInputAction.json",
     "https://schemas.hypar.io/FunctionOverrideAction.json"
   ],

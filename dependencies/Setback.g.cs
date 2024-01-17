@@ -38,6 +38,7 @@ namespace Elements
             this.BalconyProtrusionDepth = @balconyProtrusionDepth;
             }
         
+        
         // Empty constructor
         public Setback()
             : base()

@@ -27,17 +27,32 @@ namespace Elements
         [System.Runtime.Serialization.EnumMember(Value = @"All")]
         All = 0,
     
-        [System.Runtime.Serialization.EnumMember(Value = @"Top")]
-        Top = 1,
-    
         [System.Runtime.Serialization.EnumMember(Value = @"TopAndBottom")]
-        TopAndBottom = 2,
+        TopAndBottom = 1,
     
-        [System.Runtime.Serialization.EnumMember(Value = @"Front")]
-        Front = 3,
+        [System.Runtime.Serialization.EnumMember(Value = @"Top")]
+        Top = 2,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Bottom")]
+        Bottom = 3,
     
         [System.Runtime.Serialization.EnumMember(Value = @"FrontAndBack")]
         FrontAndBack = 4,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Front")]
+        Front = 5,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Back")]
+        Back = 6,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"LeftAndRight")]
+        LeftAndRight = 7,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Left")]
+        Left = 8,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Right")]
+        Right = 9,
     
     }
 }
