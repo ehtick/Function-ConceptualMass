@@ -454,7 +454,10 @@ namespace CreateEnvelopes
                         levelGroupForNewEnvelopes.Levels.FirstOrDefault(l => l.Elevation > (greatestHeightOfSeenMasses - 0.01)) ?? levelGroupForNewEnvelopes.Levels.First() :
                         levelGroupForNewEnvelopes.FindBestMatch(e.BottomLevel.Id, e.BottomLevel.Elevation);
                     var levelsForEnvelope = levelGroupForNewEnvelopes.GetLevelsBetween(bottomLevel, topLevel);
-                    e.SetLevelInfo(levelsForEnvelope, levelGroupForNewEnvelopes);
+                    if (levelsForEnvelope.Count > 1)
+                    {
+                        e.SetLevelInfo(levelsForEnvelope, levelGroupForNewEnvelopes);
+                    }
                 }
                 // if the envelope has no building assigned, that means it
                 // didn't get one from a mass underneath it: assign it a new
