@@ -20,9 +20,7 @@ namespace CreateEnvelopes
 		/// The total area of the Conceptual Masses
 		/// </summary>
 		[JsonProperty("Total Area")]
-		public double TotalArea {get; set;}
-
-
+		public double TotalArea { get; set; }
 
         /// <summary>
         /// Construct a CreateEnvelopesOutputs with default inputs.
@@ -30,16 +28,14 @@ namespace CreateEnvelopes
         /// </summary>
         public CreateEnvelopesOutputs() : base()
         {
-
         }
-
 
         /// <summary>
         /// Construct a CreateEnvelopesOutputs specifying all inputs.
         /// </summary>
         /// <returns></returns>
         [JsonConstructor]
-        public CreateEnvelopesOutputs(double totalArea): base()
+        public CreateEnvelopesOutputs(double totalArea) : base()
         {
 			this.TotalArea = totalArea;
 

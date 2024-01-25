@@ -35,6 +35,7 @@ namespace Elements
             this.OverridePaths = @overridePaths;
             }
         
+        
         // Empty constructor
         public FunctionOverrideAction()
             : base()

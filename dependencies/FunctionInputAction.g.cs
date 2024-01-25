@@ -35,6 +35,7 @@ namespace Elements
             this.InputNames = @inputNames;
             }
         
+        
         // Empty constructor
         public FunctionInputAction()
             : base()
