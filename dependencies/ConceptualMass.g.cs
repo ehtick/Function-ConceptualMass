@@ -27,7 +27,7 @@ namespace Elements
     public partial class ConceptualMass : Envelope
     {
         [JsonConstructor]
-        public ConceptualMass(IList<Line> @skeleton, string @primaryUseCategory, System.Guid? @building, IList<System.Guid> @levelIds, Transform @localCoordinateSystem, string @lichteflurbreite, string @skeletonMode, Profile @profile, double @elevation, double @height, Vector3 @direction, double @rotation, IList<double> @floorToFloorHeights, Transform @transform, Material @material, Representation @representation, bool @isElementDefinition, System.Guid @id, string @name)
+        public ConceptualMass(IList<Line> @skeleton, string @primaryUseCategory, System.Guid? @building, IList<System.Guid> @levelIds, Transform @localCoordinateSystem, Profile @profile, double @elevation, double @height, Vector3 @direction, double @rotation, IList<double> @floorToFloorHeights, Transform @transform, Material @material, Representation @representation, bool @isElementDefinition, System.Guid @id, string @name)
             : base(profile, elevation, height, direction, rotation, floorToFloorHeights, transform, material, representation, isElementDefinition, id, name)
         {
             this.Skeleton = @skeleton;
@@ -35,8 +35,6 @@ namespace Elements
             this.Building = @building;
             this.LevelIds = @levelIds;
             this.LocalCoordinateSystem = @localCoordinateSystem;
-            this.Lichteflurbreite = @lichteflurbreite;
-            this.SkeletonMode = @skeletonMode;
             }
         
         
@@ -65,14 +63,6 @@ namespace Elements
         /// <summary>A transform representing the local coordinate system for this mass</summary>
         [JsonProperty("Local Coordinate System", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public Transform LocalCoordinateSystem { get; set; }
-    
-        /// <summary>Lichteflurbreite</summary>
-        [JsonProperty("Lichteflurbreite", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Lichteflurbreite { get; set; }
-    
-        /// <summary>In which side of the building the circulation is at. Right, left, or center.</summary>
-        [JsonProperty("SkeletonMode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string SkeletonMode { get; set; }
     
     
     }
